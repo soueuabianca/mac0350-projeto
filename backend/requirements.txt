@@ -1,4 +1,3 @@
-fastapi
-uvicorn
+fastapi[standard]
 neo4j
 pydantic

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from database import driver, DATABASE_NAME
+from driver import driver, DATABASE_NAME
 from schemas import *
 
 

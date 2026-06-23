@@ -1,6 +1,10 @@
+# The Cinema Explorer 
+
+O **The Cinema Explorer** é uma aplicação web interativa desenvolvida como projeto final para a disciplina de Introdução ao Desenvolvimento de Software. Nossa proposta é transformar a maneira como exploramos o universo cinematográfico, permitindo que os usuários visualizem as conexões entre filmes, atores e diretores através de grafos dinâmicos.
+
 Ao invés de navegar por simples listas de elenco ou páginas estáticas, o usuário pode explorar um "mapa" visual do cinema. A partir de um filme central, é possível ver todas as pessoas envolvidas. Ao clicar em um ator ou diretor, o grafo se expande para revelar outros filmes em que essa pessoa trabalhou, criando uma rede interativa de descobertas.
 
-## 🚀 Principais Funcionalidades
+## Principais Funcionalidades
 
 * **Navegação Visual por Grafos:** Uma experiência interativa onde filmes funcionam como pontos centrais e o elenco/direção como conexões periféricas.
 * **Expansão Dinâmica de Conexões:** Descubra como diferentes obras se interligam clicando nas pessoas para expandir a rede e revelar novos filmes.

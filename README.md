@@ -12,6 +12,7 @@ Ao invés de navegar por simples listas de elenco ou páginas estáticas, o usu�
 * **Detalhes e Informações:** Acesse facilmente dados técnicos, sinopses de filmes e informações biográficas sobre atores e diretores.
 * **Busca Rápida:** Encontre rapidamente pontos de partida específicos pesquisando por títulos ou nomes.
 
-Link do Figma: https://www.figma.com/site/qH8L9fTHLKZUHzouOaPkZR/Untitled?node-id=0-1&p=f
 ---
 *Projeto em desenvolvimento.*
+
+Link do Figma: https://www.figma.com/site/qH8L9fTHLKZUHzouOaPkZR/Untitled?node-id=0-1&p=f

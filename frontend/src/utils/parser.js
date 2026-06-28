@@ -8,7 +8,7 @@ export function parseToCytoscape(backendData) {
       data: {
         id: node.id,
         label: node.label,
-        ...node.properties // Magia do JavaScript aqui!
+        ...node.properties // 
       }
     });
   });

@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from database import driver, DATABASE_NAME
-from schemas import *
+from app.database import driver, DATABASE_NAME
+from app.schemas import *
+from fastapi.middleware.cors import CORSMiddleware
 
 
 def format(graph) -> MovieGraph:
@@ -30,6 +31,15 @@ async def lifespan(app: FastAPI):
     driver.close()
 
 app = FastAPI(lifespan=lifespan)
+
+# Liberar conversa entre portas diferentes (5173: Vite e 8000: FastAPI)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Liberar tudo para teste local
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")

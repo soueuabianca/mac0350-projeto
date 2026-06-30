@@ -2,5 +2,5 @@
 __pycache__/
 .venv/
 testDB/
-
-
+.DS_Store
+node_modules

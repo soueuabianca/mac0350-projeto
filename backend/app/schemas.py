@@ -1,18 +1,54 @@
 from pydantic import BaseModel
+from enum import Enum
 
+
+class Genre(str, Enum):
+    Action = "action"
+    Adventure = "adventure"
+    Animation = "animation"
+    Comedy = "comedy"
+    Crime = "crime"
+    Documentary = "documentary"
+    Drama = "drama"
+    Family = "family"
+    Fantasy = "fantasy"
+    History = "history"
+    Horror = "horror"
+    Music = "music"
+    Mystery = "mystery"
+    Romance = "romance"
+    ScienceFiction = "sciencefiction"
+    TVMovie = "tvmovie"
+    Thriller = "thriller"
+    War = "war"
+    Western = "western"
 
 class Node(BaseModel):
-    id: str
+    id: int
     label: str
     properties: dict
 
 
 class Edge(BaseModel):
-    source: str
-    target: str
+    source: int
+    target: int
     type: str
 
 
 class MovieGraph(BaseModel):
     nodes: list[Node]
     edges: list[Edge]
+
+
+class Movie(BaseModel):
+    tmdbId: int
+    title: str
+    vote_average: float
+    poster_path: str
+    overview: str
+    score: float | None = None
+
+
+class MovieCatalog(BaseModel):
+    movies: list[Movie]
+    hasMore: bool

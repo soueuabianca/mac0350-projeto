@@ -52,3 +52,14 @@ class Movie(BaseModel):
 class MovieCatalog(BaseModel):
     movies: list[Movie]
     hasMore: bool
+
+class SearchResult(BaseModel):
+    id: int          # tmdbId da entidade
+    label: str       # "Movie" ou "Person"
+    name: str        # título do filme ou nome da pessoa
+    poster_path: str | None = None
+    overview: str | None = None
+    score: float     # score do fulltext
+
+class SearchResponse(BaseModel):
+    results: list[SearchResult]

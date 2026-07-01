@@ -112,3 +112,39 @@ def search_movie(q: str, limit: int = 10):
         """
         records = session.run(query, text=q)
         return catalog(records, limit)
+    
+@app.get("/search/combined", response_model=SearchResponse)
+def search_combined(q: str, limit: int = 10):
+    """
+    Busca textual combinada: retorna filmes e pessoas cujo título/nome
+    corresponda à consulta 'q', ordenados por relevância.
+    """
+    with driver.session(database=DATABASE_NAME) as session:
+        # Busca em filmes
+        query_movies = """
+        CALL db.index.fulltext.queryNodes("movieTitleIndex", $text)
+        YIELD node, score
+        RETURN node.tmdbId AS id, "Movie" AS label, node.title AS name,
+               node.posterPath AS poster_path, node.overview AS overview, score
+        ORDER BY score DESC
+        LIMIT $limit
+        """
+        movies = session.run(query_movies, text=q, limit=limit).data()
+
+        # Busca em pessoas
+        query_persons = """
+        CALL db.index.fulltext.queryNodes("personNameIndex", $text)
+        YIELD node, score
+        RETURN node.tmdbId AS id, "Person" AS label, node.name AS name,
+               node.profilePath AS poster_path, null AS overview, score
+        ORDER BY score DESC
+        LIMIT $limit
+        """
+        persons = session.run(query_persons, text=q, limit=limit).data()
+
+        # Unir, ordenar por score (já ordenados individualmente) e limitar
+        results = movies + persons
+        results.sort(key=lambda x: x["score"], reverse=True)
+        results = results[:limit]
+
+        return {"results": results}

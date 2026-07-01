@@ -1,39 +1,76 @@
-# Feito com IA Gemini
-version: "3.8"
+version: '3.8'
 
 services:
+  # Serviço do Neo4j (banco de dados)
   neo4j:
-    image: neo4j:5
-    container_name: neo4j_db
-    ports:
-      - "7474:7474" 
-      - "7687:7687"
+    image: neo4j:5-community
+    container_name: cinema-explorer-neo4j
     environment:
-      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-admin123}
+      - NEO4J_AUTH=neo4j/password123
+      - NEO4J_dbms_memory_pagecache_size=512M
+      - NEO4J_dbms_memory_heap_initial__size=512M
+      - NEO4J_dbms_memory_heap_max__size=512M
+    ports:
+      - "7474:7474"  # Browser HTTP
+      - "7687:7687"  # Bolt
     volumes:
       - neo4j_data:/data
+      - neo4j_logs:/logs
+    networks:
+      - cinema-network
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "password123", "RETURN 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # Serviço do backend (FastAPI)
   backend:
-    build: ./backend
-    container_name: backend
-    ports:
-      - "8080:8080"
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cinema-explorer-backend
     environment:
       - NEO4J_URI=bolt://neo4j:7687
-      - NEO4J_USER=neo4j
-      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-admin123}
-    depends_on:
-      - neo4j
-
-  frontend:
-    build: ./frontend
-    container_name: frontend
+      - NEO4J_USERNAME=neo4j
+      - NEO4J_PASSWORD=password123
+      - NEO4J_DATABASE=neo4j
+      - TMDB_TOKEN=${TMDB_TOKEN}  # Pega do .env da máquina host
     ports:
-      - "3000:3000"
+      - "8000:8000"
+    depends_on:
+      neo4j:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app  # Mount para desenvolvimento (hot-reload)
+      - /app/.venv  # Ignorar venv do container
+    networks:
+      - cinema-network
+    command: fastapi dev app/main.py --host 0.0.0.0 --port 8000 --reload
+
+  # Serviço do frontend (Vite)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cinema-explorer-frontend
+    ports:
+      - "5173:5173"
     environment:
-      - REACT_APP_API_URL=http://localhost:8080 
+      - VITE_API_URL=http://backend:8000
+    volumes:
+      - ./frontend:/app  # Mount para desenvolvimento (hot-reload)
+      - /app/node_modules  # Ignorar node_modules do container
     depends_on:
       - backend
+    networks:
+      - cinema-network
+    command: npm run dev -- --host 0.0.0.0
+
+networks:
+  cinema-network:
+    driver: bridge
 
 volumes:
   neo4j_data:
+  neo4j_logs:

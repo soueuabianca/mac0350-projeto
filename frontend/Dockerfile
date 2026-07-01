@@ -1,13 +1,19 @@
-#Feito com IA Gemini
-FROM node:18-alpine
+# frontend/Dockerfile
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Instalar dependências aproveitando cache
+# Copiar package.json e package-lock.json
 COPY package*.json ./
+
+# Instalar dependências
 RUN npm install
 
+# Copiar o código do frontend
 COPY . .
 
-EXPOSE 3000
-CMD ["npm", "start"] # Altere para "npm run dev" se usar Vite
+# Expor a porta do Vite
+EXPOSE 5173
+
+# Comando para rodar o servidor de desenvolvimento
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

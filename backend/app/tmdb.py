@@ -31,11 +31,19 @@ def createConstraints():
     
 def createFulltextIndex():
     with driver.session(database=DATABASE_NAME) as session:
-        query = """
+        # Índice para filmes (já existente)
+        query_movie = """
         CREATE FULLTEXT INDEX movieTitleIndex IF NOT EXISTS FOR (m:Movie)
         ON EACH [m.title]
         """
-        session.run(query)
+        session.run(query_movie)
+        
+        # NOVO: índice para pessoas
+        query_person = """
+        CREATE FULLTEXT INDEX personNameIndex IF NOT EXISTS FOR (p:Person)
+        ON EACH [p.name]
+        """
+        session.run(query_person)
 
 def selectPage(page: int, language: str) -> str:
     url_pt = f"https://api.themoviedb.org/3/discover/movie?include_adult=false&include_video=false&language=pt-BR&page={page}&sort_by=vote_average.desc&vote_average.gte=6.4&vote_count.gte=50&with_origin_country=BR&with_original_language=pt"

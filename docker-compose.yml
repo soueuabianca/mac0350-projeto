@@ -1,39 +1,64 @@
-# Feito com IA Gemini
-version: "3.8"
+version: '3.8'
 
 services:
-  neo4j:
-    image: neo4j:5
-    container_name: neo4j_db
-    ports:
-      - "7474:7474" 
-      - "7687:7687"
-    environment:
-      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-admin123}
-    volumes:
-      - neo4j_data:/data
-
+  # Serviço do backend (FastAPI)
   backend:
-    build: ./backend
-    container_name: backend
-    ports:
-      - "8080:8080"
-    environment:
-      - NEO4J_URI=bolt://neo4j:7687
-      - NEO4J_USER=neo4j
-      - NEO4J_PASSWORD=${NEO4J_PASSWORD:-admin123}
-    depends_on:
-      - neo4j
+      build:
+        context: ./backend
+        dockerfile: Dockerfile
+      container_name: cinema-explorer-backend
+      env_file:
+        - ./backend/.env  # O Docker Compose lê o .env da pasta backend
+      ports:
+        - "8000:8000"
+      volumes:
+        - ./backend:/app  # Mantém sincronizado com sua pasta local
+      networks:
+        - cinema-network
+      command: fastapi dev app/main.py --host 0.0.0.0 --port 8000 --reload
 
+  # Serviço do frontend (Vite)
   frontend:
-    build: ./frontend
-    container_name: frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: cinema-explorer-frontend
     ports:
-      - "3000:3000"
-    environment:
-      - REACT_APP_API_URL=http://localhost:8080 
+      - "5173:5173"
+    # environment:
+    #   - VITE_API_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     depends_on:
       - backend
+    networks:
+      - cinema-network
+    command: npm run dev -- --host 0.0.0.0
 
-volumes:
-  neo4j_data:
+  # ==========================================================================
+  # NEO4J LOCAL (Opcional - Atualmente desativado porque você está usando AuraDB)
+  # Se quiser rodar o banco localmente, descomente este bloco e comente as
+  # linhas do NEO4J no seu arquivo .env
+  # ==========================================================================
+  # neo4j:
+  #   image: neo4j:5-community
+  #   container_name: cinema-explorer-neo4j
+  #   environment:
+  #     - NEO4J_AUTH=neo4j/password123
+  #   ports:
+  #     - "7474:7474"
+  #     - "7687:7687"
+  #   volumes:
+  #     - neo4j_data:/data
+  #     - neo4j_logs:/logs
+  #   networks:
+  #     - cinema-network
+
+networks:
+  cinema-network:
+    driver: bridge
+
+# volumes:
+#   neo4j_data:
+#   neo4j_logs:

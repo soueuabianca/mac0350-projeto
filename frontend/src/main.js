@@ -2,39 +2,51 @@ import cytoscape from 'cytoscape';
 import { parseToCytoscape } from './utils/parser.js';
 import { graphStyles } from './styles/graphStyles.js';
 
-
-// Deixar fixo ("movie-1" ou "The Matrix") só para testar issue grafo estático.
-const FILME_TESTE = 'movie-1'; 
-const API_URL = `http://127.0.0.1:8000/movie/${FILME_TESTE}`;
+// A variável API_BASE_URL foi deletada. O Vite cuida do roteamento agora!
 
 async function initGraph() {
   try {
-    // 1. O Garçom (fetch) busca os dados no Backend
-    const response = await fetch(API_URL);
-    const backendData = await response.json();
+    // 1. Adicionamos o '/api' para o proxy do Vite interceptar e mandar pro backend
+    const popularResponse = await fetch('/api/popular?limit=1');
 
-    console.log("Dados que chegaram da API:", backendData);
+    if (!popularResponse.ok) {
+      throw new Error(`Falha ao buscar filmes populares: ${popularResponse.status}`);
+    }
 
-    // 2. O Tradutor (parser) limpa os ingredientes
+    const { movies } = await popularResponse.json();
+    const selectedMovie = movies?.[0];
+
+    if (!selectedMovie?.tmdbId) {
+      throw new Error('Nenhum filme retornado pela API do backend.');
+    }
+
+    // 2. Adicionamos o '/api' aqui também. O selectedMovie.tmdbId já é o ID numérico que o backend quer!
+    const graphResponse = await fetch(`/api/movie/${selectedMovie.tmdbId}`);
+
+    if (!graphResponse.ok) {
+      throw new Error(`Falha ao buscar grafo do filme: ${graphResponse.status}`);
+    }
+
+    const backendData = await graphResponse.json();
+
+    console.log('Dados que chegaram da API:', backendData);
+
     const cyElements = parseToCytoscape(backendData);
 
-    // 3. O Empratamento: Inicializamos o Cytoscape!
-    const cy = cytoscape({
-      container: document.getElementById('cy'), // A div no index.html
-      elements: cyElements,                     // Os dados formatados
-      style: graphStyles,                       // Nossas regras de cores e tamanhos
+    cytoscape({
+      container: document.getElementById('cy'),
+      elements: cyElements,
+      style: graphStyles,
       layout: {
-        name: 'cose',                           // Layout automático que espalha os nós
+        name: 'cose',
         padding: 50
       }
     });
 
-    console.log("Grafo renderizado com sucesso!");
-
+    console.log('Grafo renderizado com sucesso!');
   } catch (error) {
-    console.error("Erro ao carregar o grafo:", error);
+    console.error('Erro ao carregar o grafo:', error);
   }
 }
 
-// Roda a função assim que a página carrega
 initGraph();

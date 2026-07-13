@@ -14,6 +14,25 @@ Ao invés de navegar por simples listas de elenco ou páginas estáticas, o usu�
 
 Acesse o [Figma](https://www.figma.com/site/qH8L9fTHLKZUHzouOaPkZR/Untitled?node-id=0-1&p=f)
 
+
+## Execução do Projeto
+
+Para construir as imagens e iniciar os contêineres em segundo plano, execute na raiz do repositório:
+
+```bash
+docker compose up -d --build
+```
+
+Acesse a aplicação no navegador: [http://localhost:5173/](http://localhost:5173/)
+
+Para interromper a execução e remover os contêineres (mantendo os volumes de dados intactos):
+
+```bash
+docker compose down
+```
+
+> **Atenção:** Se desejar limpar completamente o ambiente e destruir os volumes de dados persistidos, adicione a flag de volume: `docker compose down -v`.
 ---
 *Projeto em desenvolvimento.*
+
 

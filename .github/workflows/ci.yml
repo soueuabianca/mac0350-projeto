@@ -11,7 +11,6 @@ on:
 jobs:
   tests:
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout do código
       uses: actions/checkout@v4
@@ -24,7 +23,7 @@ jobs:
     - name: Instalar dependências
       run: |
         python -m pip install --upgrade pip
-        pip install pytest radon
+        pip install pytest
         pip install -r backend/requirements.txt
 
     - name: Executar Testes Unitários
@@ -39,7 +38,6 @@ jobs:
 
   quality:
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout do código
       uses: actions/checkout@v4
@@ -48,9 +46,13 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
-        
+
+    - name: Instalar Radon
+      run: |
+        python -m pip install --upgrade pip
+        pip install radon
+
     - name: Extrair Métricas do Radon (JSON)
-      if: always()
       run: |
         radon cc backend/app/ -j > radon_cc.json
         radon mi backend/app/ -j > radon_mi.json
@@ -58,7 +60,6 @@ jobs:
         
     - name: Salvar Artefatos de Métricas
       uses: actions/upload-artifact@v4
-      if: always()
       with:
         name: radon-metrics
         path: |

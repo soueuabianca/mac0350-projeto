@@ -59,7 +59,7 @@ jobs:
         radon raw backend/app/ -j > radon_raw.json
         
     - name: Salvar Artefatos de Métricas
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: radon-metrics
         path: |

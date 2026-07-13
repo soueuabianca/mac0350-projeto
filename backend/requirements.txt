@@ -2,3 +2,6 @@ fastapi[standard]
 neo4j
 pydantic
 requests
+pytest
+radon
+httpx2

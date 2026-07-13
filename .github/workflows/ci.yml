@@ -9,7 +9,7 @@ on:
       - ci
 
 jobs:
-  quality-and-tests:
+  tests:
     runs-on: ubuntu-latest
 
     steps:
@@ -37,6 +37,18 @@ jobs:
       run: |
         pytest backend/tests/
 
+  quality:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout do código
+      uses: actions/checkout@v4
+
+    - name: Configurar Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+        
     - name: Extrair Métricas do Radon (JSON)
       if: always()
       run: |

@@ -1,6 +1,6 @@
-# Como rodar o servidor para desenvolvimento
+# Como rodar o servidor para desenvolvimento com `venv`
 
-Esse documento é um guia provisório para executar o servidor na máquina do usuário e testar a API, fazendo o uso do ambiente virtual do Python (sem Docker, por enquanto).
+Esse documento é um guia provisório para executar o servidor back-end na máquina do usuário, fazendo o uso do **ambiente virtual** do Python. Isto é, sem Docker e de forma independente do front-end.
 
 **OBS**: A versão Python utilizada deve ser igual ou superior a 3.10. 
 
@@ -26,6 +26,10 @@ Prossiga para a instalação dos pacotes:
 pip install -r requirements.txt  # Instala os pacotes presentes no requirements.txt
 ```
 
+## Credenciais
+
+Para executar o servidor, é necessário possuir as credenciais de conexão com a base de dados do projeto. Adicione o arquivo `.env` com essas credenciais presentes na pasta raiz do projeto. 
+
 ## Executar o servidor
 
 ```bash
@@ -36,7 +40,4 @@ fastapi dev  # Executa o servidor
 ## Acesso à API
 
 A interação com a API pode ser feita na página de documentação gerada automaticamente pelo FastAPI: http://127.0.0.1:8000/docs
-
-# Base de Dados
-
-A base de dados foi criada executando a query `mock.cypher`, presente na pasta `backend/app/queries`. Ela monta uma base provisória, com poucas entidades, apenas para depurar a interação do servidor com ela. Os identificadores dos filmes são `movie-1`, `movie-2`, ..., e dos artistas são `person-1`, `person-2`, ..., e podem ser utilizados nas rotas `GET /movie/{movie_id}` e `GET /person/{person_id}/related-movies`.   
+Nessa página, é possível encontrar a descrição e detalhes de cada rota da API.

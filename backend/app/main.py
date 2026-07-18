@@ -23,7 +23,7 @@ async def health_check() -> dict:
         WHERE m.title = $movie_title 
         RETURN m, a, r
         """
-        graph = session.run(query, movie_title="Ainda Estou Aqui").graph()
+        graph = session.run(query, movie_title="Um Sonho de Liberdade").graph()
         return format(graph)
         
 
@@ -43,7 +43,7 @@ def movie_graph(movie_id: int):
         
     
 @app.get("/person/{person_id}/related-movies", response_model=MovieGraph)
-def related_movies(person_id: str, movie_id: str):
+def related_movies(person_id: int, movie_id: int):
     """
     Return the the nodes of movies that the person with id=person_id worked on,
     and the edges connecting them to this person. The query excludes the node 
@@ -96,8 +96,11 @@ def with_genre(genre: Genre, skip: int = 0, limit: int = 10):
         records = session.run(query, skip=skip, limit=limit, genre_id=getId[genre])
         return catalog(records, limit)
     
-@app.get("/search/", response_model=MovieCatalog)
-def search_movie(q: str, limit: int = 10):
+@app.get("/searchTitle/", response_model=MovieCatalog, deprecated=True)
+def search_movie_title(q: str, limit: int = 10):
+    """
+    Returns a list of movies whose title matches the query. Simpler than GET /search. 
+    """
     with driver.session(database=DATABASE_NAME) as session:
         query = """
         CALL db.index.fulltext.queryNodes(
@@ -106,45 +109,52 @@ def search_movie(q: str, limit: int = 10):
         )
         YIELD node, score
         RETURN node.tmdbId as tmdbId, node.title as title, node.voteAverage as vote_average,
-                node.posterPath as poster_path, node.overview as overview, score
+                node.posterPath as poster_path, node.overview as overview
         ORDER BY score DESC
         LIMIT 10
         """
         records = session.run(query, text=q)
         return catalog(records, limit)
     
-@app.get("/search/combined", response_model=SearchResponse)
-def search_combined(q: str, limit: int = 10):
+@app.get("/search/", response_model=MovieCatalog)
+def search(q: str, skip: int = 0,limit: int = 10):
     """
-    Busca textual combinada: retorna filmes e pessoas cujo título/nome
-    corresponda à consulta 'q', ordenados por relevância.
+    Oficial search route. Return a list of movies whose title matches the query or that 
+    feature an actor whose name matches the query.
     """
     with driver.session(database=DATABASE_NAME) as session:
-        # Busca em filmes
-        query_movies = """
-        CALL db.index.fulltext.queryNodes("movieTitleIndex", $text)
-        YIELD node, score
-        RETURN node.tmdbId AS id, "Movie" AS label, node.title AS name,
-               node.posterPath AS poster_path, node.overview AS overview, score
-        ORDER BY score DESC
-        LIMIT $limit
+        query = """
+        CALL () {
+            CALL db.index.fulltext.queryNodes("movieTitleIndex", $text)
+            YIELD node, score
+            RETURN collect({
+                tmdbId: node.tmdbId,
+                title: node.title,
+                voteAverage: node.voteAverage,
+                posterPath: node.posterPath,
+                overview: node.overview
+        }) AS titleMovies
+        }
+        CALL () {
+            CALL db.index.fulltext.queryNodes("personNameIndex", $text)
+            YIELD node, score
+            WITH node, score
+            ORDER BY score DESC
+            MATCH (node)-[:ACTED_IN]->(m:Movie)
+            RETURN collect({
+                tmdbId: m.tmdbId,
+                title: m.title,
+                voteAverage: m.voteAverage,
+                posterPath: m.posterPath,
+                overview: m.overview
+        }) AS actorMovies
+        }
+        WITH titleMovies + actorMovies AS movies
+        UNWIND movies AS movie
+        RETURN DISTINCT movie.tmdbId as tmdbId, movie.title as title, movie.voteAverage as vote_average,
+                        movie.posterPath as poster_path, movie.overview as overview        
+        SKIP $skip
+        LIMIT $limit + 1
         """
-        movies = session.run(query_movies, text=q, limit=limit).data()
-
-        # Busca em pessoas
-        query_persons = """
-        CALL db.index.fulltext.queryNodes("personNameIndex", $text)
-        YIELD node, score
-        RETURN node.tmdbId AS id, "Person" AS label, node.name AS name,
-               node.profilePath AS poster_path, null AS overview, score
-        ORDER BY score DESC
-        LIMIT $limit
-        """
-        persons = session.run(query_persons, text=q, limit=limit).data()
-
-        # Unir, ordenar por score (já ordenados individualmente) e limitar
-        results = movies + persons
-        results.sort(key=lambda x: x["score"], reverse=True)
-        results = results[:limit]
-
-        return {"results": results}
+        records = session.run(query, text=q, skip=skip, limit=limit)
+        return catalog(records, limit)

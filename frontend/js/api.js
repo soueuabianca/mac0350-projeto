@@ -3,11 +3,12 @@ const API_BASE = '/api';  // Usa o proxy do Vite
 
 export async function fetchSearch(query, limit = 6) {
   if (!query.trim()) return [];
-  const url = `${API_BASE}/search/combined?q=${encodeURIComponent(query)}&limit=${limit}`;
+  // Atualizado para a rota unificada do backend
+  const url = `${API_BASE}/search/?q=${encodeURIComponent(query)}&limit=${limit}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Erro na busca: ${res.status}`);
   const data = await res.json();
-  return data.results || [];
+  return data.movies || []; // O schema MovieCatalog retorna 'movies'
 }
 
 export async function fetchMovieGraph(movieId) {

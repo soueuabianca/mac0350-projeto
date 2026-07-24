@@ -6,12 +6,14 @@ const resultsContainer = document.getElementById('searchResults');
 let debounceTimer = null;
 const DEBOUNCE_DELAY = 300;
 
+// frontend/js/search.js (Atualização das funções)
+
 function renderResults(results) {
   resultsContainer.innerHTML = '';
   if (results.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'dropdown-empty';
-    empty.textContent = 'Nenhum resultado encontrado.';
+    empty.textContent = 'Nenhum filme encontrado.';
     resultsContainer.appendChild(empty);
     resultsContainer.style.display = 'block';
     return;
@@ -20,9 +22,10 @@ function renderResults(results) {
   results.forEach(item => {
     const div = document.createElement('div');
     div.className = 'dropdown-item';
+    // Utilizando item.title conforme o schema Movie
     div.innerHTML = `
-      <span class="name">${item.name}</span>
-      <span class="type">${item.label}</span>
+      <span class="name">${item.title}</span>
+      <span class="type">Filme</span>
     `;
     div.addEventListener('mousedown', (e) => {
       e.preventDefault();
@@ -36,15 +39,9 @@ function renderResults(results) {
 function handleSelect(item) {
   resultsContainer.style.display = 'none';
   searchInput.value = '';
-  // Navegar para a rota (SPA)
-  if (item.label === 'Movie') {
-    window.history.pushState({}, '', `/movie/${item.id}`);
-    // Disparar evento para o app.js carregar o grafo
-    window.dispatchEvent(new CustomEvent('navigate', { detail: { path: `/movie/${item.id}` } }));
-  } else if (item.label === 'Person') {
-    window.history.pushState({}, '', `/person/${item.id}/related-movies`);
-    window.dispatchEvent(new CustomEvent('navigate', { detail: { path: `/person/${item.id}/related-movies` } }));
-  }
+  // Redireciona sempre para o grafo do filme usando tmdbId
+  window.history.pushState({}, '', `/movie/${item.tmdbId}`);
+  window.dispatchEvent(new CustomEvent('navigate', { detail: { path: `/movie/${item.tmdbId}` } }));
 }
 
 searchInput.addEventListener('input', function() {

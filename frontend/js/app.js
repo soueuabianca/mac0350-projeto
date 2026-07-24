@@ -1,19 +1,54 @@
 // frontend/js/app.js
 import { renderGraph, parseToCytoscape } from './graph.js';
 import { fetchMovieGraph, fetchPersonRelated, fetchPopularMovies, fetchNacionais, fetchByGenre } from './api.js';
+import './search.js';
 
 const app = document.getElementById('app');
 
 // Função para carregar a página inicial (home)
+// frontend/js/app.js (Atualização da função loadHome)
+
 function loadHome() {
   app.innerHTML = `
     <div class="hero">
-      <!-- Substitua pelo caminho da sua imagem -->
       <img src="/img/encontre-seu-filme.png" alt="ENCONTRE seu filme" style="max-width:100%; height:auto;" />
-      <p>Explore conexões entre filmes, atores e diretores</p>
+      <p>Explore o catálogo e as conexões do cinema</p>
     </div>
-    <p style="text-align:center; color:#888; padding:2rem;">Selecione uma opção no menu ou pesquise para começar.</p>
+    <div class="home-catalog-section">
+      <h2 style="text-align: center; margin: 2rem 0 1rem; color: #f5c842;">Filmes em Destaque</h2>
+      <div id="home-catalog-container">Carregando catálogo...</div>
+    </div>
   `;
+  
+  // Reutiliza a lógica para buscar os populares e injetar na div acima
+  fetchPopularMovies(0).then(data => {
+    const container = document.getElementById('home-catalog-container');
+    if (!container) return;
+    
+    let html = '<div class="movie-grid">';
+    data.movies.forEach(m => {
+      html += `
+        <div class="movie-card" data-id="${m.tmdbId}">
+          ${m.poster_path ? `<img src="https://image.tmdb.org/t/p/w200${m.poster_path}" alt="${m.title}" />` : ''}
+          <h3>${m.title}</h3>
+          <div class="vote">⭐ ${m.vote_average.toFixed(1)}</div>
+        </div>
+      `;
+    });
+    html += '</div>';
+    container.innerHTML = html;
+
+    // Garante que os cards na home também sejam clicáveis
+    container.querySelectorAll('.movie-card').forEach(card => {
+      card.addEventListener('click', function() {
+        const id = this.dataset.id;
+        window.history.pushState({}, '', `/movie/${id}`);
+        loadMovieGraph(id);
+      });
+    });
+  }).catch(error => {
+    document.getElementById('home-catalog-container').innerHTML = `<p style="color:red; text-align:center;">Erro ao carregar os destaques.</p>`;
+  });
 }
 
 // Função para renderizar lista de filmes (popular, nacionais, gênero)

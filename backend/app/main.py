@@ -52,7 +52,7 @@ def movie_graph(movie_id: int):
         
     
 @app.get("/person/{person_id}/related-movies", response_model=MovieGraph)
-def related_movies(person_id: str, movie_id: str):
+def related_movies(person_id: int, movie_id: int):
     """
     Return the the nodes of movies that the person with id=person_id worked on,
     and the edges connecting them to this person. The query excludes the node 

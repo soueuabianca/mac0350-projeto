@@ -168,22 +168,3 @@ def search(q: str, skip: int = 0,limit: int = 10):
         """
         records = session.run(query, text=q, skip=skip, limit=limit)
         return catalog(records, limit)
-
-def format(graph) -> MovieGraph:
-    nodes = [
-        {
-            "id": node["id"],
-            "label": next(iter(node.labels)),
-            "properties": dict(node)
-        }
-        for node in graph.nodes
-    ]
-    edges = [
-        {
-            "source": rel.start_node["id"],
-            "target": rel.end_node["id"],
-            "type": rel.type
-        }
-        for rel in graph.relationships
-    ]    
-    return {"nodes": nodes, "edges": edges}

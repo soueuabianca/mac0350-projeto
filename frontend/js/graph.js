@@ -1,85 +1,86 @@
 // frontend/js/graph.js
+// Ponte entre o app e a renderização de grafo feita em /src (parser + estilos).
 import cytoscape from 'cytoscape';
+import { parseToCytoscape } from '../src/utils/parser.js';
+import { graphStyles } from '../src/styles/graphStyles.js';
 
-export function parseToCytoscape(backendData) {
-  const elements = [];
-  backendData.nodes.forEach(node => {
-    elements.push({
-      data: {
-        id: node.id,
-        label: node.label,
-        ...node.properties
-      }
-    });
+const LAYOUT = {
+  name: 'cose',
+  padding: 50,
+  idealEdgeLength: 120,
+  nodeRepulsion: 8000,
+  animate: false
+};
+
+/**
+ * O parser usa o tmdbId cru como id do nó, e um filme e uma pessoa podem ter
+ * o mesmo tmdbId — nesse caso o Cytoscape fundiria os dois nós. Aqui os ids
+ * recebem o prefixo do rótulo (Movie-603 / Person-6384), preservando o tmdbId
+ * original em data.tmdbId. Nas arestas o backend sempre orienta
+ * Person -> Movie (ver docs/graph-schema.md).
+ */
+function withUniqueIds(elements) {
+  return elements.map(el => {
+    const data = { ...el.data };
+
+    if (data.source === undefined) {
+      return { data: { ...data, id: `${data.label}-${data.id}`, tmdbId: data.id } };
+    }
+
+    const source = `Person-${data.source}`;
+    const target = `Movie-${data.target}`;
+    return { data: { ...data, id: `${source}-${data.label}-${target}`, source, target } };
   });
-  backendData.edges.forEach(edge => {
-    elements.push({
-      data: {
-        id: `${edge.source}-${edge.type}-${edge.target}`,
-        source: edge.source,
-        target: edge.target,
-        label: edge.type
-      }
-    });
-  });
-  return elements;
 }
 
-export function renderGraph(containerId, elements) {
+/**
+ * Renderiza o grafo de um filme no container informado.
+ *
+ * @param {string} containerId  id da div que recebe o Cytoscape (ex: 'cy')
+ * @param {object} backendData  resposta do backend no formato MovieGraph
+ * @param {object} handlers     { onNodeTap(data, cy) }
+ * @returns {object|null} instância do Cytoscape
+ */
+export function renderGraph(containerId, backendData, handlers = {}) {
   const container = document.getElementById(containerId);
-  if (!container) return;
-  // Se já existir um cytoscape instance, destrua
+  if (!container) return null;
+
+  // Descarta o grafo anterior para não vazar instâncias entre navegações
   if (container._cy) {
     container._cy.destroy();
+    container._cy = null;
   }
+
   const cy = cytoscape({
-    container: container,
-    elements: elements,
-    style: [
-      {
-        selector: 'node',
-        style: {
-          'background-color': '#1e1e2f',
-          'label': 'data(label)',
-          'color': 'white',
-          'text-outline-width': 2,
-          'text-outline-color': '#1e1e2f'
-        }
-      },
-      {
-        selector: 'node[label="Movie"]',
-        style: {
-          'background-color': '#f5c842',
-          'shape': 'round-rectangle'
-        }
-      },
-      {
-        selector: 'node[label="Person"]',
-        style: {
-          'background-color': '#3a3a50',
-          'shape': 'ellipse'
-        }
-      },
-      {
-        selector: 'edge',
-        style: {
-          'width': 2,
-          'line-color': '#ccc',
-          'target-arrow-color': '#ccc',
-          'target-arrow-shape': 'triangle',
-          'curve-style': 'bezier',
-          'label': 'data(label)',
-          'font-size': '10px'
-        }
-      }
-    ],
-    layout: {
-      name: 'cose',
-      idealEdgeLength: 100,
-      nodeRepulsion: 2000
-    }
+    container,
+    elements: withUniqueIds(parseToCytoscape(backendData)),
+    style: graphStyles,
+    layout: LAYOUT
   });
-  // Armazenar referência para limpeza
+
+  if (handlers.onNodeTap) {
+    cy.on('tap', 'node', (evt) => handlers.onNodeTap(evt.target.data(), cy));
+  }
+
   container._cy = cy;
   return cy;
+}
+
+/**
+ * Acrescenta nós/arestas a um grafo já renderizado, ignorando o que já existe.
+ * Usado na expansão dinâmica (clicar numa pessoa revela outros filmes dela).
+ *
+ * @returns {number} quantidade de elementos novos adicionados
+ */
+export function expandGraph(cy, backendData) {
+  if (!cy) return 0;
+
+  const novos = withUniqueIds(parseToCytoscape(backendData))
+    .filter(el => cy.getElementById(el.data.id).empty());
+
+  if (novos.length === 0) return 0;
+
+  cy.add(novos);
+  cy.layout(LAYOUT).run();
+  return novos.length;
 }

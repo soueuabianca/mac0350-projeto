@@ -8,114 +8,191 @@
 }
 
 :root {
-  --bg-color: #ffffff;
-  --text-color: #111111;
-  --border-color: #333333;
-  --dot-color: #cccccc;
-  --font-main: 'Courier New', Courier, monospace;
-  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --bg-color: #faf7f2;        /* creme quente */
+  --surface: #ffffff;
+  --text-color: #1c1917;
+  --text-muted: #6f665c;
+  --border-color: #e6ded2;
+  --dot-color: #e4dccf;
+  --accent: #b8860b;          /* dourado discreto */
+  --accent-soft: #f3e6c8;
+  --danger: #b3261e;
+
+  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.05);
+  --shadow-md: 0 6px 20px rgba(28, 25, 23, 0.08);
+  --shadow-lg: 0 16px 40px rgba(28, 25, 23, 0.12);
 }
 
 body {
   background-color: var(--bg-color);
   color: var(--text-color);
   font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
+h1, h2, h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+
+a {
+  color: inherit;
+}
+
+button {
+  font-family: inherit;
+}
+
 /* ==========================================================================
-   HEADER (Fidelidade ao Figma)
+   HEADER
    ========================================================================== */
 .main-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem 4rem;
-  background-color: var(--bg-color);
-  border-bottom: 2px solid #e0e0e0;
+  gap: 2rem;
+  padding: 1.1rem 3rem;
+  background-color: rgba(250, 247, 242, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border-color);
   position: sticky;
   top: 0;
   z-index: 1000;
 }
 
-.mobile-avatar {
-  display: none;
-  width: 36px;
-  height: 36px;
-  background-color: #dedede;
-  border-radius: 50%;
+.brand {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-style: italic;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.brand:hover {
+  color: var(--accent);
 }
 
 .main-nav ul {
   display: flex;
   list-style: none;
-  gap: 4.5rem;
+  gap: 2rem;
 }
 
 .main-nav a {
-  font-family: var(--font-main);
-  font-size: 1.15rem;
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: var(--text-color);
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-muted);
   text-decoration: none;
-  text-transform: uppercase;
-  transition: opacity 0.2s ease;
+  padding-bottom: 3px;
+  border-bottom: 2px solid transparent;
+  transition: color 0.2s ease, border-color 0.2s ease;
 }
 
 .main-nav a:hover {
-  opacity: 0.6;
+  color: var(--text-color);
+}
+
+/* Rota atual em destaque */
+.main-nav a.is-active {
+  color: var(--text-color);
+  border-bottom-color: var(--accent);
 }
 
 /* ==========================================================================
-   SEARCH BAR
+   BARRA DE BUSCA
    ========================================================================== */
 .search-container {
   position: relative;
-  width: 260px;
+  width: 320px;
+}
+
+.search-icone {
+  position: absolute;
+  left: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  pointer-events: none;
 }
 
 #searchInput {
   width: 100%;
-  padding: 0.55rem 1.25rem;
-  font-size: 0.95rem;
+  padding: 0.6rem 2.2rem 0.6rem 2.3rem;
+  font-size: 0.92rem;
   font-family: var(--font-sans);
   color: var(--text-color);
-  background-color: transparent;
-  border: 1.5px solid var(--border-color);
-  border-radius: 999px; /* Formato Pill do Figma */
+  background-color: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
   outline: none;
+  box-shadow: var(--shadow-sm);
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+#searchInput::placeholder {
+  color: #a89e92;
+}
+
 #searchInput:focus {
-  border-color: #000000;
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.search-clear {
+  position: absolute;
+  right: 0.7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: none;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0 0.2rem;
+}
+
+.search-clear:hover {
+  color: var(--text-color);
 }
 
 .dropdown {
   display: none;
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 10px);
   left: 0;
   width: 100%;
-  background-color: #ffffff;
-  border: 1px solid #cccccc;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  max-height: 300px;
+  background-color: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  max-height: 380px;
   overflow-y: auto;
+  overflow-x: hidden;
   z-index: 1001;
 }
 
 .dropdown-item {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid #f4efe8;
   cursor: pointer;
   display: flex;
-  justify-content: space-between;
+  gap: 0.75rem;
   align-items: center;
 }
 
@@ -123,87 +200,543 @@ body {
   border-bottom: none;
 }
 
-.dropdown-item:hover {
-  background-color: #f5f5f5;
+.dropdown-item:hover,
+.dropdown-item.is-active {
+  background-color: #faf5ec;
+}
+
+.dropdown-item .thumb {
+  width: 38px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 6px;
+  flex-shrink: 0;
+  background: #efe9e0;
+}
+
+.dropdown-item .thumb-vazio {
+  display: inline-block;
 }
 
 .dropdown-item .name {
-  font-weight: 600;
   font-size: 0.9rem;
+  font-weight: 500;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Trecho que casa com o texto digitado */
+.dropdown-item mark {
+  background: var(--accent-soft);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
 }
 
 .dropdown-item .type {
-  font-size: 0.75rem;
-  color: #666;
-  background: #eee;
-  padding: 2px 6px;
-  border-radius: 4px;
+  font-size: 0.78rem;
+  color: var(--accent);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
-.dropdown-empty {
-  padding: 1rem;
+.dropdown-empty,
+.dropdown-loading {
+  padding: 1.1rem;
   text-align: center;
-  color: #777;
-  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
 }
 
 /* ==========================================================================
-   MAIN AREA & DOT GRID BACKGROUND
+   ÁREA PRINCIPAL
    ========================================================================== */
 #app {
   flex: 1;
   width: 100%;
-  /* Padrão em pontilhado idêntico às pranchas do Figma */
   background-image: radial-gradient(var(--dot-color) 1.2px, transparent 1.2px);
   background-size: 28px 28px;
   background-position: center;
-  padding: 3rem 4rem;
+  padding: 3.5rem 3rem;
 }
 
-/* Container para renderização de Grafos (Cytoscape) */
-#cy {
-  width: 100%;
-  height: 650px;
-  background-color: rgba(255, 255, 255, 0.9);
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+/* ==========================================================================
+   HOME
+   ========================================================================== */
+.hero {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto 4rem;
 }
 
-/* Grid de cards de filmes para a home/listas */
-.movie-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 2rem;
-  max-width: 1200px;
+.hero-kicker {
+  font-size: 0.8rem;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+  margin-bottom: 0.8rem;
+}
+
+.hero-title {
+  font-size: clamp(2.4rem, 6vw, 3.6rem);
+  margin-bottom: 1rem;
+}
+
+.hero-subtitle {
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  margin-bottom: 2rem;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 0.8rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.home-section {
+  max-width: 1180px;
+  margin: 0 auto 3.5rem;
+}
+
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.3rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.section-head h2 {
+  font-size: 1.5rem;
+}
+
+.section-link {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.section-link:hover {
+  color: var(--accent);
+}
+
+/* ==========================================================================
+   BOTÕES
+   ========================================================================== */
+.btn {
+  display: inline-block;
+  padding: 0.6rem 1.5rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  border: 1px solid var(--text-color);
+  border-radius: 999px;
+  background: var(--text-color);
+  color: #fdfcfa;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-color);
+  border-color: var(--border-color);
+}
+
+/* Botão de paginação centralizado abaixo da grade */
+#list-container > .btn,
+#list-container .btn {
+  margin-top: 2rem;
+}
+
+/* ==========================================================================
+   LISTAS DE FILMES
+   ========================================================================== */
+.list-view {
+  max-width: 1180px;
   margin: 0 auto;
 }
 
-.movie-card {
-  background: #fff;
-  border: 1px solid #eee;
-  border-radius: 12px;
-  padding: 0.8rem;
+.page-title {
+  font-size: 2.2rem;
   text-align: center;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin-bottom: 0.4rem;
 }
 
-.movie-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+.page-subtitle {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-bottom: 2.2rem;
+}
+
+.movie-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1.8rem;
+  text-align: left;
+}
+
+.movie-card {
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 0.7rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.movie-card:hover,
+.movie-card:focus-visible {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent);
+  outline: none;
 }
 
 .movie-card img {
   width: 100%;
-  border-radius: 8px;
-  margin-bottom: 0.8rem;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.7rem;
+  background: #efe9e0;
 }
 
 .movie-card h3 {
-  font-family: var(--font-main);
-  font-size: 0.95rem;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 0.3rem;
+}
+
+.movie-card .vote {
+  font-size: 0.82rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.movie-card-noposter {
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  background: #f1ebe2;
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #a89e92;
+  font-size: 0.8rem;
+}
+
+/* Placeholder enquanto o catálogo carrega */
+.movie-card.skeleton {
+  height: 330px;
+  border-color: transparent;
+  background: linear-gradient(90deg, #f2ece3 25%, #e9e1d5 50%, #f2ece3 75%);
+  background-size: 200% 100%;
+  animation: skeleton-pulse 1.2s infinite;
+  cursor: default;
+  pointer-events: none;
+}
+
+@keyframes skeleton-pulse {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+.lista-vazia {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 2.5rem 0;
+}
+
+.erro {
+  text-align: center;
+  color: var(--danger);
+  padding: 2.5rem 0;
+}
+
+/* ==========================================================================
+   GÊNEROS
+   ========================================================================== */
+.genre-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.genre-grid-compacto {
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+}
+
+/* Card do gênero: pôster do filme de destaque ao fundo, texto por cima */
+.genre-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.6rem;
+  min-height: 150px;
+  padding: 0.9rem 1.1rem;
+  /* Sem pôster o card fica nesse tom escuro, então nenhum destoa dos outros */
+  background-color: #262019;
+  background-size: cover;
+  background-position: center 22%;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+/* Véu escuro para o nome manter contraste sobre qualquer pôster */
+.genre-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(20, 16, 12, 0.88) 15%, rgba(20, 16, 12, 0.25) 70%);
+  transition: background 0.25s ease;
+}
+
+.genre-card:hover,
+.genre-card:focus-visible {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+  outline: none;
+}
+
+.genre-card:hover::after {
+  background: linear-gradient(to top, rgba(20, 16, 12, 0.75) 15%, rgba(20, 16, 12, 0.12) 75%);
+}
+
+.genre-card-numero,
+.genre-card-nome {
+  position: relative;
+  z-index: 1;
+}
+
+.genre-card-numero {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.65);
+  transition: color 0.2s ease;
+}
+
+.genre-card:hover .genre-card-numero {
+  color: #e8c56b;
+}
+
+.genre-card-nome {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 500;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* Banner do gênero escolhido, com o pôster do filme de destaque ao fundo */
+.genre-banner {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.2rem;
+  min-height: 190px;
+  padding: 1.6rem 1.8rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-color);
+  background-color: #efe9e0;
+  background-size: cover;
+  background-position: center 25%;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 1.8rem;
+}
+
+.genre-banner.tem-capa {
+  border-color: transparent;
+  box-shadow: var(--shadow-md);
+}
+
+.genre-banner.tem-capa::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(20, 16, 12, 0.9) 20%, rgba(20, 16, 12, 0.3));
+}
+
+.genre-banner-texto,
+.genre-banner .btn {
+  position: relative;
+  z-index: 1;
+}
+
+.genre-banner-kicker {
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  color: var(--accent);
+}
+
+.genre-banner-nome {
+  font-size: 2.1rem;
+}
+
+.genre-banner-destaque {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.genre-banner.tem-capa .genre-banner-nome {
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.55);
+}
+
+.genre-banner.tem-capa .genre-banner-destaque {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.genre-banner.tem-capa .genre-banner-kicker {
+  color: #e8c56b;
+}
+
+.btn-claro {
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--text-color);
+  border-color: transparent;
+}
+
+.genre-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 2.2rem;
+}
+
+.genre-chip {
+  font-size: 0.85rem;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.genre-chip:hover {
+  color: var(--text-color);
+  border-color: var(--accent);
+}
+
+.genre-chip.is-active {
+  background: var(--text-color);
+  border-color: var(--text-color);
+  color: #fdfcfa;
+}
+
+/* ==========================================================================
+   GRAFO
+   ========================================================================== */
+.graph-view {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.graph-title {
+  font-size: 2rem;
+  text-align: center;
+  margin-bottom: 0.3rem;
+}
+
+.graph-hint {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  margin-bottom: 1.6rem;
+}
+
+.graph-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+/* Canvas escuro: os rótulos definidos em src/styles/graphStyles.js são claros */
+#cy {
+  width: 100%;
+  height: 650px;
+  background-color: #17151a;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+}
+
+.details-panel {
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 1.2rem;
+  max-height: 650px;
+  overflow-y: auto;
+  box-shadow: var(--shadow-sm);
+}
+
+.details-panel img {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.9rem;
+}
+
+.details-panel h3 {
+  font-size: 1.25rem;
   margin-bottom: 0.4rem;
+}
+
+.details-meta {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-bottom: 0.7rem;
+}
+
+.details-text {
+  font-size: 0.9rem;
+  color: #3f3a35;
+}
+
+.details-panel a {
+  display: inline-block;
+  margin-top: 0.9rem;
+  font-size: 0.85rem;
+  color: var(--accent);
+}
+
+.details-empty {
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
 
 /* ==========================================================================
@@ -211,37 +744,55 @@ body {
    ========================================================================== */
 .main-footer {
   text-align: center;
-  padding: 1.5rem;
+  padding: 1.6rem;
   background-color: var(--bg-color);
-  border-top: 1px solid #e0e0e0;
-  font-family: var(--font-main);
+  border-top: 1px solid var(--border-color);
   font-size: 0.8rem;
-  color: #666;
+  color: var(--text-muted);
 }
 
 /* ==========================================================================
-   RESPONSIVIDADE (Mobile - Proporção Figma)
+   RESPONSIVIDADE
    ========================================================================== */
+@media (max-width: 1000px) {
+  .graph-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .details-panel {
+    max-height: none;
+  }
+}
+
 @media (max-width: 768px) {
   .main-header {
-    padding: 1rem 1.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.8rem;
+    padding: 1rem 1.2rem;
   }
 
-  /* Oculta os links de navegação para replicar o wireframe mobile do Figma */
-  .main-nav {
-    display: none;
-  }
-
-  /* Exibe o placeholder circular do menu/usuário */
-  .mobile-avatar {
-    display: block;
+  .main-nav ul {
+    gap: 1.4rem;
   }
 
   .search-container {
-    width: calc(100% - 50px);
+    width: 100%;
   }
 
   #app {
-    padding: 1.5rem;
+    padding: 2rem 1.2rem;
+  }
+
+  .genre-banner {
+    flex-wrap: wrap;
+  }
+
+  .genre-banner .btn {
+    margin-left: 0;
+  }
+
+  #cy {
+    height: 460px;
   }
 }

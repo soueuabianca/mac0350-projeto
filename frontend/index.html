@@ -4,35 +4,50 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>The Cinema Explorer</title>
+
+  <!-- Playfair Display nos títulos, Inter no corpo -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,700;1,500&display=swap"
+    rel="stylesheet"
+  />
   <link rel="stylesheet" href="/css/style.css" />
-  <script src="https://unpkg.com/cytoscape@3.34.0/dist/cytoscape.min.js"></script>
 </head>
 <body>
   <header class="main-header">
-    <div class="mobile-avatar"></div>
+    <a href="/" class="brand">The Cinema Explorer</a>
     <nav class="main-nav">
       <ul>
-        <li><a href="/popular" data-route="populares">POPULARES</a></li>
-        <li><a href="/nacionais" data-route="nacionais">NACIONAIS</a></li>
-        <li><a href="/genre" data-route="generos">GÊNEROS</a></li>
+        <li><a href="/" data-route="home">Home</a></li>
+        <li><a href="/popular" data-route="populares">Populares</a></li>
+        <li><a href="/generos" data-route="generos">Gêneros</a></li>
       </ul>
     </nav>
     <div class="search-container">
-      <input type="text" id="searchInput" placeholder="Buscar" autocomplete="off" />
-      <div id="searchResults" class="dropdown"></div>
+      <span class="search-icone" aria-hidden="true">⌕</span>
+      <input
+        type="text"
+        id="searchInput"
+        placeholder="Buscar filme ou pessoa"
+        autocomplete="off"
+        role="combobox"
+        aria-expanded="false"
+        aria-controls="searchResults"
+        aria-autocomplete="list"
+      />
+      <button type="button" id="searchClear" class="search-clear" aria-label="Limpar busca" hidden>&times;</button>
+      <div id="searchResults" class="dropdown" role="listbox" aria-label="Resultados da busca"></div>
     </div>
   </header>
 
-  <main id="app">
-    </main>
+  <main id="app"></main>
 
   <footer class="main-footer">
-    <p>The Cinema Explorer &mdash; Projeto de Introdução ao Desenvolvimento de Software</p>
+    <p>The Cinema Explorer &mdash; projeto de Introdução ao Desenvolvimento de Software</p>
   </footer>
 
-  <script type="module" src="/js/api.js"></script>
-  <script type="module" src="/js/search.js"></script>
-  <script type="module" src="/js/graph.js"></script>
+  <!-- app.js importa api.js, search.js e o renderizador de grafos em /src -->
   <script type="module" src="/js/app.js"></script>
 </body>
 </html>

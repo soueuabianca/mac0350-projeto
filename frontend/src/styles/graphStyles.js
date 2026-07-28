@@ -1,9 +1,9 @@
 export const graphStyles = [
-  // 1. Regra base para TODOS os nós
+  // 1. Regra base para todos os nós
   {
     selector: 'node',
     style: {
-      // O 'data(title)' e 'data(name)' vêm do desempacotamento que fizemos no parser!
+      // O 'data(title)' e 'data(name)' vêm do desempacotamento de parser.
       'label': function(ele) { 
           // Se for filme, mostra o título. Se for pessoa, mostra o nome.
           return ele.data('title') || ele.data('name'); 
@@ -19,9 +19,17 @@ export const graphStyles = [
   {
     selector: 'node[label = "Movie"]',
     style: {
-      'background-color': '#E50914', // Vermelho tipo cinema/Netflix
-      'width': '60px',               // Tamanho maior (critério da issue atendido)
-      'height': '60px'
+      'background-color': '#E50914', 
+      'width': '60px',               
+      'height': '60px',
+      'background-image': function(ele) {
+          const path = ele.data('posterPath');
+          // Adiciona a base do TMDB antes do caminho da imagem
+          // Cache Buster: Adiciona um parâmetro falso no final da URL da imagem (?cors=1)
+          return path ? `https://image.tmdb.org/t/p/w200${path}?cors=1` : '';
+      },
+      'background-fit': 'cover', 
+      'background-image-crossorigin': 'anonymous'     
     }
   },
 
@@ -29,9 +37,17 @@ export const graphStyles = [
   {
     selector: 'node[label = "Person"]',
     style: {
-      'background-color': '#50E3C2', // Verde água para destacar
-      'width': '35px',               // Tamanho menor
-      'height': '35px'
+      'background-color': '#50E3C2', 
+      'width': '35px',               
+      'height': '35px',
+      'background-image': function(ele) {
+          const path = ele.data('profilePath');
+          // Usa a foto de perfil do artista
+          // Cache Buster: Adiciona um parâmetro falso no final da URL da imagem (?cors=1)
+          return path ? `https://image.tmdb.org/t/p/w200${path}?cors=1` : '';
+      },
+      'background-fit': 'cover',
+      'background-image-crossorigin': 'anonymous'
     }
   },
 

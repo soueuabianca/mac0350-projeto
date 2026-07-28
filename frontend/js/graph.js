@@ -41,6 +41,7 @@ function withUniqueIds(elements) {
  * @param {object} handlers     { onNodeTap(data, cy) }
  * @returns {object|null} instância do Cytoscape
  */
+
 export function renderGraph(containerId, backendData, handlers = {}) {
   const container = document.getElementById(containerId);
   if (!container) return null;
@@ -51,9 +52,16 @@ export function renderGraph(containerId, backendData, handlers = {}) {
     container._cy = null;
   }
 
+  // 1. Guarda os elementos formatados numa variável
+  const cyElements = withUniqueIds(parseToCytoscape(backendData));
+
+  //  2. Estratégia para debugar
+  console.log("ELEMENTOS PRONTOS PRO CYTOSCAPE:", cyElements);
+
+  // 3. Inicializa o Cytoscape usando a variável
   const cy = cytoscape({
     container,
-    elements: withUniqueIds(parseToCytoscape(backendData)),
+    elements: cyElements,
     style: graphStyles,
     layout: LAYOUT
   });

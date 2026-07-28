@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from driver import driver, DATABASE_NAME
 from schemas import *
 from aux import *
+from fastapi.middleware.cors import CORSMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -10,6 +11,15 @@ async def lifespan(app: FastAPI):
     driver.close()
 
 app = FastAPI(lifespan=lifespan)
+
+# Liberar conversa entre portas diferentes (5173: Vite e 8000: FastAPI)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Liberar tudo para teste local
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/")

@@ -1,13 +1,21 @@
 export function parseToCytoscape(backendData) {
 
   const elements = [];
+  const centerId = backendData?.center?.id;
+  const centerLabel = backendData?.center?.label;
 
   // 1. Traduzir os Nós 
   backendData.nodes.forEach(node => {
+    const isCentral = centerId != null && node.id === centerId && (!centerLabel || node.label === centerLabel);
+    const canExpand = node.label === 'Person' || node.label === 'Movie';
     elements.push({
       data: {
         id: node.id,
         label: node.label,
+        isCentral: isCentral ? 'true' : 'false',
+        canExpand: canExpand ? 'true' : 'false',
+        isExpanded: 'false',
+        interactionMode: 'expand',
         ...node.properties // 
       }
     });

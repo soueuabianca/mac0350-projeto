@@ -695,6 +695,43 @@ button {
   box-shadow: var(--shadow-md);
 }
 
+.graph-canvas-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.graph-legend {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  padding: 0.2rem 0.3rem;
+}
+
+.graph-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.graph-legend-line {
+  display: inline-block;
+  width: 28px;
+  height: 2px;
+  border-radius: 999px;
+}
+
+.graph-legend-line-blue {
+  background-color: #3b82f6;
+}
+
+.graph-legend-line-red {
+  background-color: #ef4444;
+}
+
 .details-panel {
   background: var(--surface);
   border: 1px solid var(--border-color);

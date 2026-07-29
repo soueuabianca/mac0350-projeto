@@ -91,15 +91,35 @@ function skeletonGrid(qtd = PAGE_SIZE) {
 function loadHome() {
   app.innerHTML = `
     <section class="hero">
-      <p class="hero-kicker">Cinema em forma de rede</p>
-      <h1 class="hero-title">Encontre seu filme</h1>
-      <p class="hero-subtitle">
-        Parta de um filme, descubra quem o fez e siga por outros trabalhos
-        dessas pessoas — cada clique abre uma nova conexão.
-      </p>
-      <div class="hero-actions">
-        <button class="btn" data-go="/popular">Ver populares</button>
-        <button class="btn btn-ghost" data-go="/generos">Explorar gêneros</button>
+      <div class="hero-card">
+        <div class="hero-copy">
+          <p class="hero-kicker">Explorar o cinema como constelação</p>
+          <h1 class="hero-title">Explore o universo do cinema e suas conexões.</h1>
+          <p class="hero-subtitle">
+            Descubra filmes, estrelas e relações entre eles através de um grafo interativo que transforma cada nome em uma nova trilha no céu do cinema.
+          </p>
+          <div class="hero-actions">
+            <button class="btn btn-primary" data-go="/popular">Explorar filmes populares</button>
+            <button class="btn btn-ghost" data-go="/generos">Explorar por gêneros</button>
+          </div>
+        </div>
+        <div class="hero-visual" aria-hidden="true">
+          <div class="hero-visual-glow"></div>
+          <div class="hero-constellation">
+            <span class="constellation-line line-1"></span>
+            <span class="constellation-line line-2"></span>
+            <span class="constellation-line line-3"></span>
+            <span class="constellation-line line-4"></span>
+            <span class="star star-1"></span>
+            <span class="star star-2"></span>
+            <span class="star star-3"></span>
+            <span class="star star-4"></span>
+            <span class="star star-5"></span>
+            <span class="star star-6"></span>
+            <span class="orbit orbit-1"></span>
+            <span class="orbit orbit-2"></span>
+          </div>
+        </div>
       </div>
     </section>
 

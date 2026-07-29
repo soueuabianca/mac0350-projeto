@@ -86,7 +86,9 @@ export function renderGraph(containerId, backendData, handlers = {}) {
     container,
     elements: cyElements,
     style: graphStyles,
-    layout: LAYOUT
+    layout: LAYOUT,
+    minZoom: 0.55,
+    maxZoom: 2.2
   });
 
   if (handlers.onNodeTap) {

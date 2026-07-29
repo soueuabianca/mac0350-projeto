@@ -6,11 +6,11 @@ services:
         dockerfile: Dockerfile
       container_name: cinema-explorer-backend
       env_file:
-        - .env  # O Docker Compose lê o .env da raiz aqui automaticamente
+        - .env
       ports:
         - "8000:8000"
       volumes:
-        - ./backend:/app  # Mantém sincronizado com sua pasta local
+        - ./backend:/app  
       networks:
         - cinema-network
       command: fastapi dev app/main.py --host 0.0.0.0 --port 8000 --reload
@@ -34,29 +34,6 @@ services:
       - cinema-network
     command: npm run dev -- --host 0.0.0.0
 
-  # ==========================================================================
-  # NEO4J LOCAL (Opcional - Atualmente desativado porque você está usando AuraDB)
-  # Se quiser rodar o banco localmente, descomente este bloco e comente as
-  # linhas do NEO4J no seu arquivo .env
-  # ==========================================================================
-  # neo4j:
-  #   image: neo4j:5-community
-  #   container_name: cinema-explorer-neo4j
-  #   environment:
-  #     - NEO4J_AUTH=neo4j/password123
-  #   ports:
-  #     - "7474:7474"
-  #     - "7687:7687"
-  #   volumes:
-  #     - neo4j_data:/data
-  #     - neo4j_logs:/logs
-  #   networks:
-  #     - cinema-network
-
 networks:
   cinema-network:
     driver: bridge
-
-# volumes:
-#   neo4j_data:
-#   neo4j_logs:

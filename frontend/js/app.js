@@ -96,7 +96,7 @@ function loadHome() {
           <p class="hero-kicker">Explorar o cinema como constelação</p>
           <h1 class="hero-title">Explore o universo do cinema e suas conexões.</h1>
           <p class="hero-subtitle">
-            Descubra filmes, estrelas e relações entre eles através de um grafo interativo que transforma cada nome em uma nova trilha no céu do cinema.
+            Descubra filmes, atores, diretores e relações entre eles através de um grafo interativo que transforma cada nome em uma nova trilha no céu da indústria cinematográfica.
           </p>
           <div class="hero-actions">
             <button class="btn btn-primary" data-go="/popular">Explorar filmes populares</button>

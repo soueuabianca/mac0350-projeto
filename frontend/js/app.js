@@ -341,7 +341,7 @@ async function carregarFilmesDoGenero(slug) {
 // Grafos
 // --------------------------------------------------------------------------
 
-// Esqueleto da tela de grafo: área do Cytoscape + painel lateral de detalhes
+// Esqueleto da tela de grafo: área do Cytoscape + painel inferior de detalhes
 function renderGraphShell(titulo) {
   app.innerHTML = `
     <section class="graph-view">
@@ -358,7 +358,7 @@ function renderGraphShell(titulo) {
           </div>
           <div id="cy"></div>
         </div>
-        <aside id="details-panel" class="details-panel">
+        <aside id="details-panel" class="details-panel details-panel-collapsed">
           <p class="details-empty">Selecione um nó do grafo para ver os detalhes.</p>
         </aside>
       </div>
@@ -366,8 +366,8 @@ function renderGraphShell(titulo) {
   `;
 }
 
-// Painel lateral com os dados do nó clicado
-function showNodeDetails(node) {
+// Painel inferior com os dados do nó clicado, inicialmente compacto
+function showNodeDetails(node, expanded = false) {
   const panel = document.getElementById('details-panel');
   if (!panel) return;
 
@@ -380,22 +380,40 @@ function showNodeDetails(node) {
   const title = normalizedNode.title || normalizedNode.name || '';
   const overview = normalizedNode.overview || normalizedNode.biography || 'Sem informação disponível.';
   const releaseDate = normalizedNode.releaseYear || normalizedNode.release_date || normalizedNode.first_air_date || '';
+  const isMovie = label === 'Movie';
+  const previewText = overview.length > 140 ? `${overview.slice(0, 140)}...` : overview;
+  const visibleText = expanded ? overview : previewText;
+  const media = isMovie
+    ? (normalizedNode.posterPath ? `<img src="https://image.tmdb.org/t/p/w200${normalizedNode.posterPath}" alt="${title}" />` : '')
+    : (normalizedNode.profilePath ? `<img src="https://image.tmdb.org/t/p/w200${normalizedNode.profilePath}" alt="${title}" />` : '');
 
-  if (label === 'Movie') {
-    panel.innerHTML = `
-      ${normalizedNode.posterPath ? `<img src="https://image.tmdb.org/t/p/w200${normalizedNode.posterPath}" alt="${title}" />` : ''}
-      <h3>${title}</h3>
-      ${releaseDate ? `<p class="details-meta">${releaseDate}</p>` : ''}
-      <p class="details-text">${overview}</p>
-      ${normalizedNode.tmdbUrl ? `<a href="${normalizedNode.tmdbUrl}" target="_blank" rel="noopener">Ver no TMDB</a>` : ''}
-    `;
-  } else {
-    panel.innerHTML = `
-      ${normalizedNode.profilePath ? `<img src="https://image.tmdb.org/t/p/w200${normalizedNode.profilePath}" alt="${title}" />` : ''}
-      <h3>${title}</h3>
-      <p class="details-text">${overview}</p>
-      ${normalizedNode.tmdbUrl ? `<a href="${normalizedNode.tmdbUrl}" target="_blank" rel="noopener">Ver no TMDB</a>` : ''}
-    `;
+  panel.classList.toggle('details-panel-collapsed', !expanded);
+  panel.classList.toggle('details-panel-expanded', expanded);
+
+  panel.innerHTML = `
+    <div class="details-panel-shell">
+      <div class="details-panel-header">
+        <span class="details-kicker">${isMovie ? 'Filme central' : 'Pessoa central'}</span>
+        <button class="details-toggle" data-action="${expanded ? 'collapse' : 'expand'}">${expanded ? 'Recolher' : 'Ver detalhes'}</button>
+      </div>
+      <div class="details-body">
+        ${media ? `<div class="details-media">${media}</div>` : ''}
+        <div class="details-copy">
+          <h3>${title}</h3>
+          ${releaseDate ? `<p class="details-meta">${releaseDate}</p>` : ''}
+          <p class="details-text">${visibleText}</p>
+          ${expanded && normalizedNode.tmdbUrl ? `<a href="${normalizedNode.tmdbUrl}" target="_blank" rel="noopener">Ver no TMDB</a>` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+
+  const toggleButton = panel.querySelector('.details-toggle');
+  if (toggleButton) {
+    toggleButton.addEventListener('click', () => {
+      const nextExpanded = toggleButton.dataset.action === 'expand';
+      showNodeDetails(normalizedNode, nextExpanded);
+    });
   }
 }
 

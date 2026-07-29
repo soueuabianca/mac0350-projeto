@@ -680,15 +680,15 @@ button {
 
 .graph-layout {
   display: grid;
-  grid-template-columns: 1fr 320px;
-  gap: 1.5rem;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
   align-items: start;
 }
 
 /* Canvas escuro: os rótulos definidos em src/styles/graphStyles.js são claros */
 #cy {
   width: 100%;
-  height: 650px;
+  height: 700px;
   background-color: #17151a;
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
@@ -736,27 +736,75 @@ button {
   background: var(--surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius);
-  padding: 1.2rem;
-  max-height: 650px;
-  overflow-y: auto;
+  padding: 1rem 1.1rem;
   box-shadow: var(--shadow-sm);
 }
 
-.details-panel img {
-  width: 100%;
+.details-panel-collapsed {
+  max-height: 180px;
+  overflow: hidden;
+}
+
+.details-panel-expanded {
+  max-height: none;
+}
+
+.details-panel-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.details-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.details-kicker {
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.details-toggle {
+  border: 1px solid var(--border-color);
+  background: var(--surface);
+  color: var(--text-color);
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.details-body {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.details-media img {
+  width: 120px;
   border-radius: var(--radius-sm);
-  margin-bottom: 0.9rem;
+  object-fit: cover;
+}
+
+.details-copy {
+  flex: 1;
 }
 
 .details-panel h3 {
-  font-size: 1.25rem;
-  margin-bottom: 0.4rem;
+  font-size: 1.1rem;
+  margin-bottom: 0.25rem;
 }
 
 .details-meta {
   color: var(--text-muted);
-  font-size: 0.85rem;
-  margin-bottom: 0.7rem;
+  font-size: 0.84rem;
+  margin-bottom: 0.55rem;
 }
 
 .details-text {
@@ -766,8 +814,8 @@ button {
 
 .details-panel a {
   display: inline-block;
-  margin-top: 0.9rem;
-  font-size: 0.85rem;
+  margin-top: 0.7rem;
+  font-size: 0.84rem;
   color: var(--accent);
 }
 
@@ -792,12 +840,13 @@ button {
    RESPONSIVIDADE
    ========================================================================== */
 @media (max-width: 1000px) {
-  .graph-layout {
-    grid-template-columns: 1fr;
+  .details-body {
+    flex-direction: column;
   }
 
-  .details-panel {
-    max-height: none;
+  .details-media img {
+    width: 100%;
+    max-width: 180px;
   }
 }
 

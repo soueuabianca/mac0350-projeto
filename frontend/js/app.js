@@ -5,7 +5,7 @@ import {
   fetchMovieGraph,
   fetchPersonRelatedMovies
 } from './api.js';
-import { renderGraph, expandGraph } from './graph.js';
+import { renderGraph, expandGraph, mergeGraph, setCentralNode } from './graph.js';
 import './search.js';
 
 const app = document.getElementById('app');
@@ -39,6 +39,7 @@ const generoPorSlug = slug => GENEROS.find(g => g.slug === slug);
 
 // Filme que está no centro da exploração atual
 let currentMovieId = null;
+const expandedBranches = new Map();
 
 // --------------------------------------------------------------------------
 // Helpers de UI
@@ -350,7 +351,13 @@ function renderGraphShell(titulo) {
         clique num filme para torná-lo o novo centro.
       </p>
       <div class="graph-layout">
-        <div id="cy"></div>
+        <div class="graph-canvas-wrapper">
+          <div class="graph-legend" aria-label="Legenda do grafo">
+            <span class="graph-legend-item"><span class="graph-legend-line graph-legend-line-blue"></span>Atuou</span>
+            <span class="graph-legend-item"><span class="graph-legend-line graph-legend-line-red"></span>Dirigiu</span>
+          </div>
+          <div id="cy"></div>
+        </div>
         <aside id="details-panel" class="details-panel">
           <p class="details-empty">Selecione um nó do grafo para ver os detalhes.</p>
         </aside>
@@ -364,20 +371,30 @@ function showNodeDetails(node) {
   const panel = document.getElementById('details-panel');
   if (!panel) return;
 
-  if (node.label === 'Movie') {
+  const normalizedNode = {
+    ...node,
+    ...(node?.properties || {})
+  };
+
+  const label = normalizedNode.label || normalizedNode.properties?.label;
+  const title = normalizedNode.title || normalizedNode.name || '';
+  const overview = normalizedNode.overview || normalizedNode.biography || 'Sem informação disponível.';
+  const releaseDate = normalizedNode.releaseYear || normalizedNode.release_date || normalizedNode.first_air_date || '';
+
+  if (label === 'Movie') {
     panel.innerHTML = `
-      ${node.posterPath ? `<img src="https://image.tmdb.org/t/p/w200${node.posterPath}" alt="${node.title}" />` : ''}
-      <h3>${node.title || ''}</h3>
-      ${node.releaseYear ? `<p class="details-meta">${node.releaseYear}</p>` : ''}
-      <p class="details-text">${node.overview || 'Sem sinopse disponível.'}</p>
-      ${node.tmdbUrl ? `<a href="${node.tmdbUrl}" target="_blank" rel="noopener">Ver no TMDB</a>` : ''}
+      ${normalizedNode.posterPath ? `<img src="https://image.tmdb.org/t/p/w200${normalizedNode.posterPath}" alt="${title}" />` : ''}
+      <h3>${title}</h3>
+      ${releaseDate ? `<p class="details-meta">${releaseDate}</p>` : ''}
+      <p class="details-text">${overview}</p>
+      ${normalizedNode.tmdbUrl ? `<a href="${normalizedNode.tmdbUrl}" target="_blank" rel="noopener">Ver no TMDB</a>` : ''}
     `;
   } else {
     panel.innerHTML = `
-      ${node.profilePath ? `<img src="https://image.tmdb.org/t/p/w200${node.profilePath}" alt="${node.name}" />` : ''}
-      <h3>${node.name || ''}</h3>
-      <p class="details-text">${node.biography || 'Sem biografia disponível.'}</p>
-      ${node.tmdbUrl ? `<a href="${node.tmdbUrl}" target="_blank" rel="noopener">Ver no TMDB</a>` : ''}
+      ${normalizedNode.profilePath ? `<img src="https://image.tmdb.org/t/p/w200${normalizedNode.profilePath}" alt="${title}" />` : ''}
+      <h3>${title}</h3>
+      <p class="details-text">${overview}</p>
+      ${normalizedNode.tmdbUrl ? `<a href="${normalizedNode.tmdbUrl}" target="_blank" rel="noopener">Ver no TMDB</a>` : ''}
     `;
   }
 }
@@ -387,16 +404,98 @@ function setGraphStatus(mensagem) {
   if (hint) hint.textContent = mensagem;
 }
 
+function restoreBaseMovieView(cy) {
+  const baseMovie = cy.nodes('[label = "Movie"]').filter(node => String(node.data('tmdbId')) === String(currentMovieId)).first();
+  if (!baseMovie || baseMovie.length === 0) return;
+
+  const movieData = baseMovie.data();
+  showNodeDetails(movieData);
+  const titulo = document.getElementById('graph-title');
+  if (titulo) titulo.textContent = movieData.title || 'Grafo';
+  setCentralNode(cy, baseMovie.id());
+}
+
+function collapseExpandedBranch(cy, personNode) {
+  const branch = expandedBranches.get(personNode.id);
+  if (!branch) return false;
+
+  branch.addedNodeIds.forEach(nodeId => {
+    const element = cy.getElementById(nodeId);
+    if (!element.empty()) cy.remove(element);
+  });
+
+  branch.addedEdgeIds.forEach(edgeId => {
+    const element = cy.getElementById(edgeId);
+    if (!element.empty()) cy.remove(element);
+  });
+
+  expandedBranches.delete(personNode.id);
+  const node = cy.getElementById(personNode.id);
+  if (!node.empty()) node.data('isExpanded', 'false');
+
+  if (expandedBranches.size === 0) {
+    restoreBaseMovieView(cy);
+    setGraphStatus(`Grafo recolhido para o filme inicial.`);
+  } else {
+    setGraphStatus(`Grafo recolhido para ${personNode.name || 'esta pessoa'}.`);
+  }
+
+  return true;
+}
+
 // Clique num nó: pessoa expande a rede, filme vira o novo centro
 async function handleNodeTap(node, cy) {
-  showNodeDetails(node);
+  const cyNode = cy && node.id ? cy.getElementById(node.id) : null;
 
   if (node.label === 'Person') {
+    if (cyNode && !cyNode.empty() && cyNode.data('canExpand') !== 'true') {
+      return;
+    }
+
+    const personNodeId = node.id;
+    const existingBranch = expandedBranches.get(personNodeId);
+
+    if (existingBranch) {
+      collapseExpandedBranch(cy, node);
+      return;
+    }
+
     try {
       const relacionados = await fetchPersonRelatedMovies(node.tmdbId, currentMovieId);
-      const adicionados = expandGraph(cy, relacionados);
-      if (adicionados === 0) {
+      const hasAdditionalMovies = (relacionados?.nodes || []).some(item => item.label === 'Movie' && String(item.id) !== String(currentMovieId));
+
+      if (!hasAdditionalMovies) {
+        if (cyNode && !cyNode.empty()) {
+          cyNode.data('canExpand', 'false');
+          cyNode.data('hovered', 'false');
+        }
+        setGraphStatus(`${node.name || 'esta pessoa'} não tem outros filmes para expandir.`);
+        return;
+      }
+
+      const result = mergeGraph(cy, relacionados);
+      const centralNode = relacionados.nodes.find(item => item.id === relacionados.center?.id && item.label === relacionados.center?.label) || relacionados.nodes.find(item => item.label === 'Person');
+      if (centralNode) {
+        showNodeDetails(centralNode);
+        const titulo = document.getElementById('graph-title');
+        if (titulo) {
+          titulo.textContent = centralNode.properties?.name || centralNode.name || 'Grafo';
+        }
+        const cyId = `${centralNode.label}-${centralNode.id}`;
+        setCentralNode(cy, cyId);
+      }
+
+      if (result.addedNodeIds.length === 0 && result.addedEdgeIds.length === 0) {
         setGraphStatus(`Nenhum filme novo encontrado para ${node.name || 'esta pessoa'}.`);
+      } else {
+        expandedBranches.set(personNodeId, {
+          nodeId: personNodeId,
+          addedNodeIds: result.addedNodeIds,
+          addedEdgeIds: result.addedEdgeIds
+        });
+        const targetNode = cy.getElementById(personNodeId);
+        if (!targetNode.empty()) targetNode.data('isExpanded', 'true');
+        setGraphStatus(`Grafo expandido para ${node.name || 'esta pessoa'}.`);
       }
     } catch (error) {
       setGraphStatus(`Erro ao expandir: ${error.message}`);
@@ -405,13 +504,32 @@ async function handleNodeTap(node, cy) {
   }
 
   if (node.label === 'Movie' && node.tmdbId !== currentMovieId) {
-    navigateTo(`/movie/${node.tmdbId}`);
+    try {
+      const data = await fetchMovieGraph(node.tmdbId);
+      currentMovieId = Number(node.tmdbId);
+      const centralNode = data.nodes.find(item => item.id === data.center?.id && item.label === data.center?.label) || data.nodes.find(item => item.label === 'Movie');
+      if (centralNode) {
+        showNodeDetails(centralNode);
+        const titulo = document.getElementById('graph-title');
+        if (titulo) {
+          titulo.textContent = centralNode.properties?.title || centralNode.title || 'Grafo';
+        }
+        const cyId = `${centralNode.label}-${centralNode.id}`;
+        setCentralNode(cy, cyId);
+      }
+      mergeGraph(cy, data);
+      setGraphStatus('Grafo atualizado com o novo filme central.');
+    } catch (error) {
+      setGraphStatus(`Erro ao atualizar grafo: ${error.message}`);
+    }
+    return;
   }
 }
 
 // Grafo de um filme (rota /movie/{id})
 async function loadMovieGraph(movieId) {
   currentMovieId = Number(movieId);
+  expandedBranches.clear();
   renderGraphShell('Carregando grafo...');
 
   try {
@@ -427,6 +545,8 @@ async function loadMovieGraph(movieId) {
     if (titulo && filme) titulo.textContent = filme.properties.title;
 
     renderGraph('cy', data, { onNodeTap: handleNodeTap });
+    const centralNode = data.nodes.find(node => node.id === data.center?.id && node.label === data.center?.label) || data.nodes.find(node => node.label === 'Movie');
+    if (centralNode) showNodeDetails(centralNode);
   } catch (error) {
     app.innerHTML = `<p class="erro">Erro ao carregar o grafo: ${error.message}</p>`;
   }
@@ -435,6 +555,7 @@ async function loadMovieGraph(movieId) {
 // Grafo dos outros filmes de uma pessoa (rota /person/{id}/related-movies)
 async function loadPersonRelated(personId, movieId) {
   currentMovieId = Number(movieId);
+  expandedBranches.clear();
   renderGraphShell('Carregando filmes relacionados...');
 
   try {
@@ -450,6 +571,8 @@ async function loadPersonRelated(personId, movieId) {
     if (titulo && pessoa) titulo.textContent = pessoa.properties.name;
 
     renderGraph('cy', data, { onNodeTap: handleNodeTap });
+    const centralNode = data.nodes.find(node => node.id === data.center?.id && node.label === data.center?.label) || data.nodes.find(node => node.label === 'Person');
+    if (centralNode) showNodeDetails(centralNode);
   } catch (error) {
     app.innerHTML = `<p class="erro">Erro ao carregar filmes relacionados: ${error.message}</p>`;
   }

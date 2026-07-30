@@ -5,7 +5,7 @@ import {
   fetchMovieGraph,
   fetchPersonRelatedMovies
 } from './api.js';
-import { renderGraph, expandGraph, mergeGraph, removeOrphanNodes, setCentralNode } from './graph.js';
+import { renderGraph, expandGraph, mergeGraph, setCentralNode } from './graph.js';
 import './search.js';
 
 const app = document.getElementById('app');
@@ -429,7 +429,6 @@ function collapseExpandedBranch(cy, personNode) {
     if (!element.empty()) cy.remove(element);
   });
 
-  removeOrphanNodes(cy);
   expandedBranches.delete(personNode.id);
   const node = cy.getElementById(personNode.id);
   if (!node.empty()) node.data('isExpanded', 'false');
@@ -449,18 +448,7 @@ async function handleNodeTap(node, cy) {
   const cyNode = cy && node.id ? cy.getElementById(node.id) : null;
 
   if (node.label === 'Person') {
-    const currentPerson = cyNode && !cyNode.empty() ? cyNode.data() : node;
-
-    if (currentPerson) {
-      showNodeDetails(currentPerson);
-      const titulo = document.getElementById('graph-title');
-      if (titulo) {
-        titulo.textContent = currentPerson.name || 'Grafo';
-      }
-    }
-
     if (cyNode && !cyNode.empty() && cyNode.data('canExpand') !== 'true') {
-      setGraphStatus(`${currentPerson?.name || 'esta pessoa'} não tem outros filmes para expandir.`);
       return;
     }
 

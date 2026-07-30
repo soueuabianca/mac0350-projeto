@@ -5,7 +5,14 @@ import {
   fetchMovieGraph,
   fetchPersonRelatedMovies
 } from './api.js';
-import { renderGraph, expandGraph, mergeGraph, setCentralNode } from './graph.js';
+import {
+  renderGraph,
+  mergeGraph,
+  setCentralNode,
+  setSelectedNode,
+  removeBranch,
+  relaxPhysics
+} from './graph.js';
 import './search.js';
 
 const app = document.getElementById('app');
@@ -37,9 +44,46 @@ const GENEROS = [
 
 const generoPorSlug = slug => GENEROS.find(g => g.slug === slug);
 
-// Filme que está no centro da exploração atual
+// --------------------------------------------------------------------------
+// Estado da exploração de grafo
+// --------------------------------------------------------------------------
+
+// Filme que está no centro da exploração atual (base das requisições)
 let currentMovieId = null;
+// Filme da rota. Âncora fixa: o centro muda a cada clique, este não.
+let baseMovieId = null;
+// Id Cytoscape do nó que abriu a rota. Nunca é removido numa retração.
+let rootNodeId = null;
+// Nó exibido no painel de detalhes
+let selectedNodeId = null;
+
+/**
+ * Ramos abertos: id do nó -> o que aquele clique trouxe para a tela.
+ *
+ *   { nodeId, parentId, addedNodeIds, addedEdgeIds }
+ *
+ * `parentId` é o ramo que inseriu o nó raiz deste ramo. É o que transforma o
+ * registro numa árvore: recolher um ramo tem que recolher os ramos que nasceram
+ * dentro dele, senão o filho fica registrado apontando para nós que já saíram.
+ */
 const expandedBranches = new Map();
+
+// Autoria de cada nó: id do nó -> id do ramo que o inseriu. Sem isso um ramo
+// aberto a partir de um nó recém-criado não tem como ser ligado ao ramo que o
+// criou, e a árvore de ramos vira uma lista plana.
+const branchOwnerByNode = new Map();
+
+// Biografias já buscadas (null = backend não devolveu nada para essa pessoa)
+const personDetailsCache = new Map();
+
+function resetGraphState(movieId, nodeId) {
+  currentMovieId = movieId == null ? null : Number(movieId);
+  baseMovieId = currentMovieId;
+  rootNodeId = nodeId;
+  selectedNodeId = null;
+  expandedBranches.clear();
+  branchOwnerByNode.clear();
+}
 
 // --------------------------------------------------------------------------
 // Helpers de UI
@@ -404,132 +448,324 @@ function setGraphStatus(mensagem) {
   if (hint) hint.textContent = mensagem;
 }
 
-function restoreBaseMovieView(cy) {
-  const baseMovie = cy.nodes('[label = "Movie"]').filter(node => String(node.data('tmdbId')) === String(currentMovieId)).first();
-  if (!baseMovie || baseMovie.length === 0) return;
-
-  const movieData = baseMovie.data();
-  showNodeDetails(movieData);
+function setGraphTitle(texto) {
   const titulo = document.getElementById('graph-title');
-  if (titulo) titulo.textContent = movieData.title || 'Grafo';
-  setCentralNode(cy, baseMovie.id());
+  if (titulo && texto) titulo.textContent = texto;
 }
 
-function collapseExpandedBranch(cy, personNode) {
-  const branch = expandedBranches.get(personNode.id);
-  if (!branch) return false;
+const nomeDoNo = data => data?.name || data?.title || data?.properties?.name || 'este nó';
 
-  branch.addedNodeIds.forEach(nodeId => {
-    const element = cy.getElementById(nodeId);
-    if (!element.empty()) cy.remove(element);
-  });
+// --------------------------------------------------------------------------
+// Seleção — independente de topologia
+// --------------------------------------------------------------------------
 
-  branch.addedEdgeIds.forEach(edgeId => {
-    const element = cy.getElementById(edgeId);
-    if (!element.empty()) cy.remove(element);
-  });
+/**
+ * Seleciona um nó: painel de detalhes + realce visual.
+ *
+ * Antes isso vivia dentro do fluxo de expansão, e o clique numa pessoa sem
+ * filmes novos (grau 1, canExpand = 'false') saía por um `return` antes de
+ * chegar no painel — os dados existiam e a UI ignorava o clique. Selecionar é
+ * outra responsabilidade: não adiciona nem remove nada, então nunca depende de
+ * o nó ter algo para expandir e nunca mexe na física.
+ */
+function selectNode(cy, cyNode) {
+  if (!cy || !cyNode || cyNode.empty()) return;
 
-  expandedBranches.delete(personNode.id);
-  const node = cy.getElementById(personNode.id);
-  if (!node.empty()) node.data('isExpanded', 'false');
+  selectedNodeId = cyNode.id();
+  setSelectedNode(cy, selectedNodeId);
+  showNodeDetails(cyNode.data());
 
-  if (expandedBranches.size === 0) {
-    restoreBaseMovieView(cy);
-    setGraphStatus(`Grafo recolhido para o filme inicial.`);
-  } else {
-    setGraphStatus(`Grafo recolhido para ${personNode.name || 'esta pessoa'}.`);
+  if (cyNode.data('label') === 'Person') hydratePersonDetails(cy, cyNode);
+}
+
+/**
+ * Busca a biografia de uma pessoa quando ela não veio junto com o nó.
+ *
+ * Só lê propriedades: nada do que chega aqui entra no grafo, então o painel se
+ * completa sem tocar em topologia nem em layout.
+ */
+async function hydratePersonDetails(cy, cyNode) {
+  if (cyNode.data('biography')) return;
+
+  const tmdbId = cyNode.data('tmdbId');
+  const nodeId = cyNode.id();
+  if (tmdbId == null) return;
+
+  // id/source/target são identidade do elemento no Cytoscape: sobrescrever
+  // qualquer um deles quebra o grafo, então propriedade do backend não entra
+  const RESERVADAS = new Set(['id', 'source', 'target']);
+
+  const aplicar = (properties) => {
+    if (!properties) return;
+    Object.entries(properties).forEach(([chave, valor]) => {
+      if (!RESERVADAS.has(chave)) cyNode.data(chave, valor);
+    });
+    // O usuário pode ter clicado em outro nó enquanto a resposta vinha
+    if (selectedNodeId === nodeId) showNodeDetails(cyNode.data());
+  };
+
+  if (personDetailsCache.has(tmdbId)) {
+    aplicar(personDetailsCache.get(tmdbId));
+    return;
   }
+
+  try {
+    const data = await fetchPersonRelatedMovies(tmdbId, currentMovieId ?? baseMovieId);
+    const pessoa = (data?.nodes || []).find(
+      item => item.label === 'Person' && String(item.id) === String(tmdbId)
+    );
+    const properties = pessoa?.properties || null;
+    personDetailsCache.set(tmdbId, properties);
+    aplicar(properties);
+  } catch (error) {
+    // Painel já mostra o que havia no nó; falha de rede não apaga isso
+    personDetailsCache.set(tmdbId, null);
+  }
+}
+
+function focusRootNode(cy) {
+  const root = rootNodeId ? cy.getElementById(rootNodeId) : null;
+  if (!root || root.empty()) return;
+
+  setCentralNode(cy, root.id());
+  selectNode(cy, root);
+  setGraphTitle(root.data('title') || root.data('name') || 'Grafo');
+}
+
+// --------------------------------------------------------------------------
+// Registro dos ramos abertos
+// --------------------------------------------------------------------------
+
+function registerBranch(nodeId, result) {
+  if (!result || result.count === 0) return false;
+
+  expandedBranches.set(nodeId, {
+    nodeId,
+    parentId: branchOwnerByNode.get(nodeId) ?? null,
+    addedNodeIds: [...result.addedNodeIds],
+    addedEdgeIds: [...result.addedEdgeIds]
+  });
+
+  // Primeiro que inseriu é o dono: se o nó reaparecer em outra expansão, ele
+  // continua pertencendo ao ramo que o trouxe para a tela.
+  result.addedNodeIds.forEach(id => {
+    if (!branchOwnerByNode.has(id)) branchOwnerByNode.set(id, nodeId);
+  });
 
   return true;
 }
 
-// Clique num nó: pessoa expande a rede, filme vira o novo centro
+/**
+ * O ramo pedido mais todos os que nasceram dentro dele (BFS na árvore de ramos).
+ *
+ * É esta varredura que faltava no caminho "expande Filme A -> Ator X -> abre o
+ * Filme B -> retrai o Ator X": o ramo do Filme B era filho do ramo do Ator X,
+ * mas ninguém percorria essa relação. O Filme B saía da tela junto com o ramo do
+ * ator e o elenco dele ficava registrado num ramo cujo nó raiz não existia mais.
+ */
+function branchSubtreeIds(nodeId) {
+  const encontrados = new Set([nodeId]);
+  const fila = [nodeId];
+
+  while (fila.length > 0) {
+    const atual = fila.shift();
+    expandedBranches.forEach((branch, id) => {
+      if (branch.parentId === atual && !encontrados.has(id)) {
+        encontrados.add(id);
+        fila.push(id);
+      }
+    });
+  }
+
+  return [...encontrados];
+}
+
+/**
+ * Retrai um ramo: remove o que ele trouxe, os sub-ramos e os órfãos resultantes.
+ */
+function collapseBranch(cy, nodeId) {
+  if (!expandedBranches.has(nodeId)) return false;
+
+  const ramos = branchSubtreeIds(nodeId);
+  const nodeIds = [];
+  const edgeIds = [];
+
+  ramos.forEach(id => {
+    const branch = expandedBranches.get(id);
+    if (!branch) return;
+    nodeIds.push(...branch.addedNodeIds);
+    edgeIds.push(...branch.addedEdgeIds);
+  });
+
+  const { removedNodeIds, removedEdgeIds } = removeBranch(cy, {
+    nodeIds,
+    edgeIds,
+    // O nó recolhido continua na tela; a raiz da rota também, sempre
+    anchorIds: [nodeId, rootNodeId].filter(Boolean)
+  });
+
+  const nosRemovidos = new Set(removedNodeIds);
+  const arestasRemovidas = new Set(removedEdgeIds);
+
+  // Os ramos do subárvore saem do registro, e os nós que saíram da tela perdem
+  // a autoria. Sem isso um clique futuro no mesmo id acharia um ramo fantasma.
+  ramos.forEach(id => {
+    expandedBranches.delete(id);
+    const node = cy.getElementById(id);
+    if (!node.empty()) node.data('isExpanded', 'false');
+  });
+
+  nosRemovidos.forEach(id => {
+    expandedBranches.delete(id);
+    branchOwnerByNode.delete(id);
+  });
+
+  // A cascata de órfãos pode ter levado nós de ramos que continuam abertos:
+  // o registro deles precisa refletir só o que ainda está na tela.
+  expandedBranches.forEach(branch => {
+    branch.addedNodeIds = branch.addedNodeIds.filter(id => !nosRemovidos.has(id));
+    branch.addedEdgeIds = branch.addedEdgeIds.filter(id => !arestasRemovidas.has(id));
+  });
+
+  // O centro da exploração pode ter sido um dos filmes removidos; nesse caso as
+  // próximas requisições precisam voltar a partir do filme da rota.
+  if (currentMovieId !== baseMovieId && cy.getElementById(`Movie-${currentMovieId}`).empty()) {
+    currentMovieId = baseMovieId;
+  }
+
+  const mudouTopologia = removedNodeIds.length > 0 || removedEdgeIds.length > 0;
+
+  if (selectedNodeId && nosRemovidos.has(selectedNodeId)) {
+    focusRootNode(cy);
+  } else if (expandedBranches.size === 0) {
+    focusRootNode(cy);
+  }
+
+  if (mudouTopologia) relaxPhysics(cy);
+
+  setGraphStatus(
+    expandedBranches.size === 0
+      ? 'Grafo recolhido para o nó inicial.'
+      : `Ramo recolhido (${removedNodeIds.length} nós removidos).`
+  );
+
+  return mudouTopologia;
+}
+
+// --------------------------------------------------------------------------
+// Clique num nó
+// --------------------------------------------------------------------------
+
+/**
+ * Clique num nó: seleciona sempre; expande/retrai só quando faz sentido.
+ *
+ * A física entra apenas nos caminhos que mudaram a topologia — cada `return`
+ * antes de `relaxPhysics` é um clique que não reorganiza a tela.
+ */
 async function handleNodeTap(node, cy) {
-  const cyNode = cy && node.id ? cy.getElementById(node.id) : null;
+  if (!cy || !node?.id) return;
+
+  const cyNode = cy.getElementById(node.id);
+  if (cyNode.empty()) return;
+
+  selectNode(cy, cyNode);
 
   if (node.label === 'Person') {
-    if (cyNode && !cyNode.empty() && cyNode.data('canExpand') !== 'true') {
-      return;
-    }
-
-    const personNodeId = node.id;
-    const existingBranch = expandedBranches.get(personNodeId);
-
-    if (existingBranch) {
-      collapseExpandedBranch(cy, node);
-      return;
-    }
-
-    try {
-      const relacionados = await fetchPersonRelatedMovies(node.tmdbId, currentMovieId);
-      const hasAdditionalMovies = (relacionados?.nodes || []).some(item => item.label === 'Movie' && String(item.id) !== String(currentMovieId));
-
-      if (!hasAdditionalMovies) {
-        if (cyNode && !cyNode.empty()) {
-          cyNode.data('canExpand', 'false');
-          cyNode.data('hovered', 'false');
-        }
-        setGraphStatus(`${node.name || 'esta pessoa'} não tem outros filmes para expandir.`);
-        return;
-      }
-
-      const result = mergeGraph(cy, relacionados);
-      const centralNode = relacionados.nodes.find(item => item.id === relacionados.center?.id && item.label === relacionados.center?.label) || relacionados.nodes.find(item => item.label === 'Person');
-      if (centralNode) {
-        showNodeDetails(centralNode);
-        const titulo = document.getElementById('graph-title');
-        if (titulo) {
-          titulo.textContent = centralNode.properties?.name || centralNode.name || 'Grafo';
-        }
-        const cyId = `${centralNode.label}-${centralNode.id}`;
-        setCentralNode(cy, cyId);
-      }
-
-      if (result.addedNodeIds.length === 0 && result.addedEdgeIds.length === 0) {
-        setGraphStatus(`Nenhum filme novo encontrado para ${node.name || 'esta pessoa'}.`);
-      } else {
-        expandedBranches.set(personNodeId, {
-          nodeId: personNodeId,
-          addedNodeIds: result.addedNodeIds,
-          addedEdgeIds: result.addedEdgeIds
-        });
-        const targetNode = cy.getElementById(personNodeId);
-        if (!targetNode.empty()) targetNode.data('isExpanded', 'true');
-        setGraphStatus(`Grafo expandido para ${node.name || 'esta pessoa'}.`);
-      }
-    } catch (error) {
-      setGraphStatus(`Erro ao expandir: ${error.message}`);
-    }
+    await togglePersonBranch(cy, cyNode);
     return;
   }
 
-  if (node.label === 'Movie' && node.tmdbId !== currentMovieId) {
-    try {
-      const data = await fetchMovieGraph(node.tmdbId);
-      currentMovieId = Number(node.tmdbId);
-      const centralNode = data.nodes.find(item => item.id === data.center?.id && item.label === data.center?.label) || data.nodes.find(item => item.label === 'Movie');
-      if (centralNode) {
-        showNodeDetails(centralNode);
-        const titulo = document.getElementById('graph-title');
-        if (titulo) {
-          titulo.textContent = centralNode.properties?.title || centralNode.title || 'Grafo';
-        }
-        const cyId = `${centralNode.label}-${centralNode.id}`;
-        setCentralNode(cy, cyId);
-      }
-      mergeGraph(cy, data);
-      setGraphStatus('Grafo atualizado com o novo filme central.');
-    } catch (error) {
-      setGraphStatus(`Erro ao atualizar grafo: ${error.message}`);
-    }
+  if (node.label === 'Movie') {
+    await focusMovie(cy, cyNode);
+  }
+}
+
+async function togglePersonBranch(cy, cyNode) {
+  const nodeId = cyNode.id();
+  const nome = nomeDoNo(cyNode.data());
+
+  if (expandedBranches.has(nodeId)) {
+    collapseBranch(cy, nodeId);
     return;
+  }
+
+  // Pessoa já conhecida como folha: nem rede, nem física. O painel de detalhes
+  // já foi atualizado por selectNode antes de chegar aqui.
+  if (cyNode.data('canExpand') !== 'true') {
+    setGraphStatus(`${nome} não tem outros filmes para expandir — detalhes no painel.`);
+    return;
+  }
+
+  try {
+    const relacionados = await fetchPersonRelatedMovies(cyNode.data('tmdbId'), currentMovieId);
+
+    const temOutrosFilmes = (relacionados?.nodes || []).some(
+      item => item.label === 'Movie' && String(item.id) !== String(currentMovieId)
+    );
+
+    if (!temOutrosFilmes) {
+      cyNode.data('canExpand', 'false');
+      setGraphStatus(`${nome} não tem outros filmes para expandir — detalhes no painel.`);
+      return;
+    }
+
+    const result = mergeGraph(cy, relacionados);
+
+    if (result.count === 0) {
+      setGraphStatus(`Os filmes de ${nome} já estão todos na tela.`);
+      return;
+    }
+
+    registerBranch(nodeId, result);
+    cyNode.data('isExpanded', 'true');
+    setCentralNode(cy, nodeId);
+    setGraphTitle(nome);
+    relaxPhysics(cy);
+    setGraphStatus(`Grafo expandido para ${nome}.`);
+  } catch (error) {
+    setGraphStatus(`Erro ao expandir: ${error.message}`);
+  }
+}
+
+async function focusMovie(cy, cyNode) {
+  const nodeId = cyNode.id();
+  const tmdbId = Number(cyNode.data('tmdbId'));
+  const titulo = nomeDoNo(cyNode.data());
+
+  // Já é o centro: não há elenco novo para buscar, então nada de física
+  if (tmdbId === Number(currentMovieId)) {
+    if (cyNode.data('isCentral') !== 'true') setCentralNode(cy, nodeId);
+    setGraphTitle(titulo);
+    setGraphStatus(`${titulo} já é o centro do grafo.`);
+    return;
+  }
+
+  try {
+    const data = await fetchMovieGraph(tmdbId);
+    const result = mergeGraph(cy, data);
+
+    currentMovieId = tmdbId;
+    setCentralNode(cy, nodeId);
+    setGraphTitle(titulo);
+
+    if (result.count === 0) {
+      setGraphStatus(`${titulo} virou o centro; o grafo dele já estava na tela.`);
+      return;
+    }
+
+    // O elenco que entra aqui passa a ter dono. Era esse registro que faltava:
+    // sem ele o Filme B saía numa retração e o elenco dele ficava órfão.
+    registerBranch(nodeId, result);
+    relaxPhysics(cy);
+    setGraphStatus(`Grafo atualizado com ${titulo} no centro.`);
+  } catch (error) {
+    setGraphStatus(`Erro ao atualizar grafo: ${error.message}`);
   }
 }
 
 // Grafo de um filme (rota /movie/{id})
 async function loadMovieGraph(movieId) {
-  currentMovieId = Number(movieId);
-  expandedBranches.clear();
+  resetGraphState(movieId, `Movie-${Number(movieId)}`);
   renderGraphShell('Carregando grafo...');
 
   try {
@@ -541,12 +777,10 @@ async function loadMovieGraph(movieId) {
     }
 
     const filme = data.nodes.find(n => n.label === 'Movie');
-    const titulo = document.getElementById('graph-title');
-    if (titulo && filme) titulo.textContent = filme.properties.title;
+    if (filme) setGraphTitle(filme.properties.title);
 
-    renderGraph('cy', data, { onNodeTap: handleNodeTap });
-    const centralNode = data.nodes.find(node => node.id === data.center?.id && node.label === data.center?.label) || data.nodes.find(node => node.label === 'Movie');
-    if (centralNode) showNodeDetails(centralNode);
+    const cy = renderGraph('cy', data, { onNodeTap: handleNodeTap });
+    if (cy) selectNode(cy, cy.getElementById(rootNodeId));
   } catch (error) {
     app.innerHTML = `<p class="erro">Erro ao carregar o grafo: ${error.message}</p>`;
   }
@@ -554,8 +788,7 @@ async function loadMovieGraph(movieId) {
 
 // Grafo dos outros filmes de uma pessoa (rota /person/{id}/related-movies)
 async function loadPersonRelated(personId, movieId) {
-  currentMovieId = Number(movieId);
-  expandedBranches.clear();
+  resetGraphState(movieId, `Person-${Number(personId)}`);
   renderGraphShell('Carregando filmes relacionados...');
 
   try {
@@ -567,12 +800,10 @@ async function loadPersonRelated(personId, movieId) {
     }
 
     const pessoa = data.nodes.find(n => n.label === 'Person');
-    const titulo = document.getElementById('graph-title');
-    if (titulo && pessoa) titulo.textContent = pessoa.properties.name;
+    if (pessoa) setGraphTitle(pessoa.properties.name);
 
-    renderGraph('cy', data, { onNodeTap: handleNodeTap });
-    const centralNode = data.nodes.find(node => node.id === data.center?.id && node.label === data.center?.label) || data.nodes.find(node => node.label === 'Person');
-    if (centralNode) showNodeDetails(centralNode);
+    const cy = renderGraph('cy', data, { onNodeTap: handleNodeTap });
+    if (cy) selectNode(cy, cy.getElementById(rootNodeId));
   } catch (error) {
     app.innerHTML = `<p class="erro">Erro ao carregar filmes relacionados: ${error.message}</p>`;
   }

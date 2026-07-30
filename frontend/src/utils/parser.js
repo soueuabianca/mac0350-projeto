@@ -15,6 +15,9 @@ export function parseToCytoscape(backendData) {
         isCentral: isCentral ? 'true' : 'false',
         canExpand: canExpand ? 'true' : 'false',
         isExpanded: 'false',
+        // Seleção (painel de detalhes) é estado próprio, separado de expansão:
+        // um nó folha não expande e ainda assim pode estar selecionado.
+        isSelected: 'false',
         interactionMode: 'expand',
         ...node.properties // 
       }

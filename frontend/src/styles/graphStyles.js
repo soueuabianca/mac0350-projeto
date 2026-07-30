@@ -89,11 +89,27 @@ export const graphStyles = [
     }
   },
 
+  // Sem filmes para revelar, mas ainda clicável: o clique abre os detalhes.
+  // A opacidade menor é o aviso de "não expande"; o cursor continua de clique.
   {
     selector: 'node[canExpand = "false"]',
     style: {
-      'cursor': 'not-allowed',
+      'cursor': 'pointer',
       'opacity': 0.78
+    }
+  },
+
+  // Nó no painel de detalhes. Anel tracejado para não competir com o dourado
+  // do nó central nem com o realce de hover.
+  {
+    selector: 'node[isSelected = "true"]',
+    style: {
+      'border-width': 3,
+      'border-color': '#8b7355',
+      'border-style': 'dashed',
+      'border-opacity': 1,
+      'opacity': 1,
+      'z-index': 4
     }
   },
 

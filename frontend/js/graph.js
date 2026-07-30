@@ -241,12 +241,14 @@ export function renderGraph(containerId, backendData, handlers = {}) {
       return;
     }
 
+    // Todo nó é clicável: mesmo sem nada para expandir, o clique abre os
+    // detalhes no painel. O cursor diferencia o que o clique vai fazer, não se
+    // o clique existe — 'not-allowed' aqui mentia para o usuário.
+    node.data('hovered', 'true');
     if (node.data('canExpand') === 'true') {
-      node.data('hovered', 'true');
       container.style.cursor = isExpanded ? 'zoom-out' : 'pointer';
     } else {
-      node.data('hovered', 'false');
-      container.style.cursor = 'not-allowed';
+      container.style.cursor = 'pointer';
     }
   });
 
@@ -263,64 +265,48 @@ export function renderGraph(containerId, backendData, handlers = {}) {
 }
 
 /**
- * Acrescenta nós/arestas a um grafo já renderizado, ignorando o que já existe.
- * Usado na expansão dinâmica (clicar numa pessoa revela outros filmes dela).
- *
- * @returns {number} quantidade de elementos novos adicionados
- */
-export function expandGraph(cy, backendData) {
-  if (!cy) return 0;
-
-  const novos = withUniqueIds(parseToCytoscape(backendData))
-    .filter(el => cy.getElementById(el.data.id).empty());
-
-  if (novos.length === 0) return 0;
-
-  cy.add(novos);
-  relaxLayout(cy);
-  return novos.length;
-}
-
-/**
  * Reacomoda o grafo preservando as posições atuais e reenquadra ao terminar.
- * É o movimento que o usuário vê a cada expansão, então roda animado.
+ * É o movimento que o usuário vê a cada mudança de topologia, então roda animado.
+ *
+ * Exportado de propósito. Antes o merge e a troca de nó central chamavam a
+ * física por conta própria, e isso misturava duas decisões diferentes: "o que
+ * mudou no grafo" e "vale reorganizar a tela". O efeito era duplo — um clique
+ * que adicionava nós rodava o layout duas vezes (mergeGraph + setCentralNode),
+ * e um clique que não adicionava nada ainda reembaralhava tudo. Agora quem
+ * decide é o app, depois de conferir se a topologia realmente mudou.
  */
-function relaxLayout(cy) {
+export function relaxPhysics(cy) {
+  if (!cy || cy.destroyed?.()) return;
+
   const layout = cy.layout(LAYOUT_RELAX);
   cy.one('layoutstop', () => animateFit(cy, 550));
   layout.run();
 }
 
+/**
+ * Acrescenta nós/arestas a um grafo já renderizado, ignorando o que já existe.
+ * Usado na expansão dinâmica (clicar numa pessoa revela outros filmes dela).
+ *
+ * Não roda física e não escolhe o nó central: devolve exatamente o que entrou
+ * na tela para quem chamou decidir. `count === 0` é a resposta confiável de
+ * "nada mudou na topologia".
+ *
+ * @returns {{count: number, addedNodeIds: string[], addedEdgeIds: string[]}}
+ */
 export function mergeGraph(cy, backendData) {
   if (!cy) return { count: 0, addedNodeIds: [], addedEdgeIds: [] };
 
   const parsedElements = withUniqueIds(parseToCytoscape(backendData));
-  const nodes = parsedElements.filter(el => el.data.source === undefined);
-  const centralIds = new Set(
-    nodes
-      .filter(node => node.data.isCentral === 'true')
-      .map(node => node.data.id)
-  );
-
-  cy.nodes().forEach(node => node.data('isCentral', 'false'));
-
   const novos = parsedElements.filter(el => cy.getElementById(el.data.id).empty());
-  if (novos.length === 0) {
-    cy.nodes().forEach(node => {
-      if (centralIds.has(node.id())) {
-        node.data('isCentral', 'true');
-      }
-    });
-    return { count: 0, addedNodeIds: [], addedEdgeIds: [] };
-  }
 
-  cy.add(novos);
-  cy.nodes().forEach(node => {
-    if (centralIds.has(node.id())) {
-      node.data('isCentral', 'true');
-    }
-  });
-  relaxLayout(cy);
+  if (novos.length === 0) return { count: 0, addedNodeIds: [], addedEdgeIds: [] };
+
+  const added = cy.add(novos);
+
+  // O parser marca como central o centro da resposta do backend. Deixar isso
+  // passar criaria dois nós centrais na tela; quem manda no centro é o app.
+  added.nodes().forEach(node => node.data('isCentral', 'false'));
+
   return {
     count: novos.length,
     addedNodeIds: novos.filter(el => el.data.source === undefined).map(el => el.data.id),
@@ -335,7 +321,100 @@ export function setCentralNode(cy, nodeId) {
     node.data('isCentral', node.id() === nodeId ? 'true' : 'false');
     node.data('hovered', 'false');
   });
-  relaxLayout(cy);
+}
+
+/**
+ * Marca o nó selecionado (o que está sendo exibido no painel de detalhes).
+ * Puramente visual: não mexe em nós, arestas nem física.
+ */
+export function setSelectedNode(cy, nodeId) {
+  if (!cy) return;
+
+  cy.nodes().forEach(node => {
+    node.data('isSelected', node.id() === nodeId ? 'true' : 'false');
+  });
+}
+
+/**
+ * Nós alcançáveis a partir das âncoras, andando pelas arestas que sobraram.
+ * É a definição operacional de "ainda está ligado à árvore principal".
+ */
+function alcancaveisDe(cy, anchorIds) {
+  const vistos = new Set();
+  const fila = anchorIds.filter(id => {
+    const node = cy.getElementById(id);
+    return !node.empty() && node.isNode();
+  });
+
+  while (fila.length > 0) {
+    const id = fila.shift();
+    if (vistos.has(id)) continue;
+    vistos.add(id);
+
+    cy.getElementById(id).neighborhood('node').forEach(vizinho => {
+      if (!vistos.has(vizinho.id())) fila.push(vizinho.id());
+    });
+  }
+
+  return vistos;
+}
+
+/**
+ * Desfaz um ramo do grafo — e tudo que só existia por causa dele.
+ *
+ * Apagar apenas os ids registrados no ramo não basta. Quem clicou num filme
+ * trazido pelo ramo puxou elenco novo que não está nessa lista, e esse elenco
+ * sobrava solto no canvas quando o ramo era recolhido. Então:
+ *
+ *   1. as arestas do ramo saem primeiro — só depois disso o grau dos nós
+ *      reflete o grafo pós-retração;
+ *   2. o que fica é decidido por alcançabilidade a partir das âncoras (o nó
+ *      recolhido e a raiz da rota). Nó que não chega mais na árvore principal
+ *      é destruído, em cascata, com as arestas que ainda tinha — o que inclui
+ *      qualquer nó de grau 0, que por definição não alcança âncora nenhuma.
+ *
+ * A varredura roda sobre todos os nós da tela, não só os do ramo: órfão herdado
+ * de uma retração anterior morre aqui também.
+ *
+ * @param {object} cy
+ * @param {object} opts
+ * @param {string[]} opts.nodeIds   nós registrados no ramo (e nos sub-ramos)
+ * @param {string[]} opts.edgeIds   arestas registradas no ramo (e nos sub-ramos)
+ * @param {string[]} opts.anchorIds nós que nunca podem ser removidos
+ * @returns {{removedNodeIds: string[], removedEdgeIds: string[]}}
+ */
+export function removeBranch(cy, { nodeIds = [], edgeIds = [], anchorIds = [] } = {}) {
+  if (!cy) return { removedNodeIds: [], removedEdgeIds: [] };
+
+  const removedNodeIds = [];
+  const removedEdgeIds = [];
+  const ancoras = new Set(anchorIds);
+
+  edgeIds.forEach(id => {
+    const edge = cy.getElementById(id);
+    if (edge.empty() || !edge.isEdge()) return;
+    removedEdgeIds.push(id);
+    cy.remove(edge);
+  });
+
+  const alcancaveis = alcancaveisDe(cy, [...ancoras]);
+
+  // Os nós do ramo entram na varredura junto com o resto da tela: os do ramo
+  // são o caso comum, o resto cobre órfão herdado.
+  const candidatos = new Set([...nodeIds, ...cy.nodes().map(node => node.id())]);
+
+  candidatos.forEach(id => {
+    if (ancoras.has(id) || alcancaveis.has(id)) return;
+
+    const node = cy.getElementById(id);
+    if (node.empty() || !node.isNode()) return;
+
+    node.connectedEdges().forEach(edge => removedEdgeIds.push(edge.id()));
+    removedNodeIds.push(id);
+    cy.remove(node);
+  });
+
+  return { removedNodeIds, removedEdgeIds };
 }
 
 /**

@@ -5,7 +5,7 @@ import {
   fetchMovieGraph,
   fetchPersonRelatedMovies
 } from './api.js';
-import { renderGraph, expandGraph, mergeGraph, setCentralNode } from './graph.js';
+import { renderGraph, expandGraph, mergeGraph, removeOrphanNodes, setCentralNode } from './graph.js';
 import './search.js';
 
 const app = document.getElementById('app');
@@ -429,6 +429,7 @@ function collapseExpandedBranch(cy, personNode) {
     if (!element.empty()) cy.remove(element);
   });
 
+  removeOrphanNodes(cy);
   expandedBranches.delete(personNode.id);
   const node = cy.getElementById(personNode.id);
   if (!node.empty()) node.data('isExpanded', 'false');

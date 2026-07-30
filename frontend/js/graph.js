@@ -27,9 +27,6 @@ const PHYSICS = {
   minTemp: 1.0,
   componentSpacing: 140,
   animationEasing: 'ease-out',
-  // Quem enquadra na primeira renderização é o próprio cose. Tentei assumir
-  // isso no animateFit com zoom calculado à mão e o resultado cortava nós nas
-  // bordas; o fit nativo acerta.
   fit: true
 };
 
@@ -326,6 +323,20 @@ export function mergeGraph(cy, backendData) {
     addedNodeIds: novos.filter(el => el.data.source === undefined).map(el => el.data.id),
     addedEdgeIds: novos.filter(el => el.data.source !== undefined).map(el => el.data.id)
   };
+}
+
+export function removeOrphanNodes(cy) {
+  if (!cy) return 0;
+
+  const isolatedNodes = cy.nodes().filter(node => {
+    const hasEdges = node.connectedEdges().length > 0;
+    return !hasEdges && node.data('isCentral') !== 'true';
+  });
+
+  if (isolatedNodes.length === 0) return 0;
+
+  isolatedNodes.remove();
+  return isolatedNodes.length;
 }
 
 export function setCentralNode(cy, nodeId) {

@@ -22,7 +22,7 @@ getId = {
     "western": 37
 }
 
-def format(graph, center_node=None) -> MovieGraph:
+def format(graph) -> MovieGraph:
     """
     Process the neo4j graph object to return a dict 
     that contains a list of nodes and a list of 
@@ -43,16 +43,8 @@ def format(graph, center_node=None) -> MovieGraph:
             "type": rel.type
         }
         for rel in graph.relationships
-    ]
-
-    center = None
-    if center_node is not None:
-        center = {
-            "id": center_node["tmdbId"],
-            "label": next(iter(center_node.labels))
-        }
-
-    return {"nodes": nodes, "edges": edges, "center": center}
+    ]    
+    return {"nodes": nodes, "edges": edges}
 
 
 def catalog(records, limit) -> MovieCatalog:

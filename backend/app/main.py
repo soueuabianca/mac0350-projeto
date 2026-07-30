@@ -49,8 +49,7 @@ def movie_graph(movie_id: int):
         RETURN m, a, r
         """
         graph = session.run(query, movie_id=movie_id).graph()
-        center_node = next((node for node in graph.nodes if next(iter(node.labels)) == "Movie"), None)
-        return format(graph, center_node=center_node)
+        return format(graph)
         
     
 @app.get("/person/{person_id}/related-movies", response_model=MovieGraph)
@@ -67,8 +66,7 @@ def related_movies(person_id: int, movie_id: int):
         RETURN p, m, r        
         """
         graph = session.run(query, person_id=person_id, movie_id=movie_id).graph()
-        center_node = next((node for node in graph.nodes if next(iter(node.labels)) == "Person"), None)
-        return format(graph, center_node=center_node)
+        return format(graph)
 
 
 @app.get("/popular", response_model=MovieCatalog)

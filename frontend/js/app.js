@@ -449,7 +449,18 @@ async function handleNodeTap(node, cy) {
   const cyNode = cy && node.id ? cy.getElementById(node.id) : null;
 
   if (node.label === 'Person') {
+    const currentPerson = cyNode && !cyNode.empty() ? cyNode.data() : node;
+
+    if (currentPerson) {
+      showNodeDetails(currentPerson);
+      const titulo = document.getElementById('graph-title');
+      if (titulo) {
+        titulo.textContent = currentPerson.name || 'Grafo';
+      }
+    }
+
     if (cyNode && !cyNode.empty() && cyNode.data('canExpand') !== 'true') {
+      setGraphStatus(`${currentPerson?.name || 'esta pessoa'} não tem outros filmes para expandir.`);
       return;
     }
 

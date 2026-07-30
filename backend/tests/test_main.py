@@ -48,7 +48,7 @@ def test_health_check_retorna_200_e_grafo_vazio(mock_driver):
     response = client.get("/")
     
     assert response.status_code == 200
-    assert response.json() == {"nodes": [], "edges": []}
+    assert response.json() == {"nodes": [], "edges": [], "center": "null"}
     mock_session.run.assert_called_once()
 
 

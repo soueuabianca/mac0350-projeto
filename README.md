@@ -83,6 +83,11 @@ O projeto já possui uma base funcional e interessante, mas ainda há espaço pa
 
 ---
 
-*Projeto em desenvolvimento.*
+## Impacto da IA nas Métricas de Qualidade
 
+![Grafico Metricas](docs/evolucao_qualidade.png)
+
+A integração de scripts JavaScript no frontend, elaborados com o auxílio do Cloud Code, provocou uma degradação estrutural imediata no repositório. O Índice de Manutenibilidade (MI) caiu de 88 para 73, e a Complexidade Ciclomática (CC) média subiu para 1.85.
+
+Apesar dessa queda — que comprova a tendência da IA de introduzir lógica desnecessária e aumentar o débito técnico —, o impacto prático não foi destrutivo. Os valores absolutos continuam na faixa de excelência (MI classificado como Rank A e CC indicando baixo risco). A conclusão crítica é que a IA acelera a entrega da interface, mas exige uma arquitetura prévia rigorosa e testes automatizados capazes de absorver a sujeira estrutural do código gerado sem comprometer a estabilidade do sistema.
 

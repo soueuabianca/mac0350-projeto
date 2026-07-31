@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Cinema Explorer</title>
+
+  <!-- Playfair Display nos títulos, Inter no corpo -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Playfair+Display:ital,wght@0,500;0,700;1,500&display=swap"
+    rel="stylesheet"
+  />
+  <script type="module" crossorigin src="/assets/index-B-bkKgXe.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-CRy-rTP0.css">
+</head>
+<body>
+  <header class="main-header">
+    <a href="/" class="brand">The Cinema Explorer</a>
+    <nav class="main-nav">
+      <ul>
+        <li><a href="/" data-route="home">Home</a></li>
+        <li><a href="/popular" data-route="populares">Populares</a></li>
+        <li><a href="/generos" data-route="generos">Gêneros</a></li>
+      </ul>
+    </nav>
+    <div class="search-container">
+      <span class="search-icone" aria-hidden="true">⌕</span>
+      <input
+        type="text"
+        id="searchInput"
+        placeholder="Buscar filme ou pessoa"
+        autocomplete="off"
+        role="combobox"
+        aria-expanded="false"
+        aria-controls="searchResults"
+        aria-autocomplete="list"
+      />
+      <button type="button" id="searchClear" class="search-clear" aria-label="Limpar busca" hidden>&times;</button>
+      <div id="searchResults" class="dropdown" role="listbox" aria-label="Resultados da busca"></div>
+    </div>
+  </header>
+
+  <main id="app"></main>
+
+  <footer class="main-footer">
+    <p>The Cinema Explorer &mdash; projeto de Introdução ao Desenvolvimento de Software</p>
+  </footer>
+
+  <!-- app.js importa api.js, search.js e o renderizador de grafos em /src -->
+</body>
+</html>

@@ -35,9 +35,15 @@ class Edge(BaseModel):
     type: str
 
 
+class Center(BaseModel):
+    id: int
+    label: str
+
+
 class MovieGraph(BaseModel):
     nodes: list[Node]
     edges: list[Edge]
+    center: Center | None = None
 
 
 class Movie(BaseModel):
